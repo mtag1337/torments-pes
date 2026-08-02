@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale5.0">
+    <title>تسجيل في بطولة الجيمنج</title>
+    <style>
+        body { font-family: Tahoma, sans-serif; background: #0f172a; color: #fff; padding: 20px; margin: 0; }
+        .container { max-width: 500px; margin: auto; background: #1e293b; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        h2 { text-align: center; color: #38bdf8; }
+        label { display: block; margin-top: 10px; font-weight: bold; }
+        input, textarea { width: 100%; padding: 10px; margin-top: 5px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; box-sizing: border-box; }
+        button { width: 100%; margin-top: 20px; padding: 12px; background: #22c55e; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        button:hover { background: #16a34a; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>تسجيل في البطولة</h2>
+    <form id="registrationForm">
+        <label>اسم اللاعب:</label>
+        <input type="text" id="name" required placeholder="اكتب اسمك الثلاثي">
+
+        <label>رقم التليفون (واتساب):</label>
+        <input type="text" id="phone" required placeholder="01xxxxxxxx">
+
+        <label>الـ ID في اللعبة:</label>
+        <input type="text" id="game_id" required placeholder="اكتب الـ ID الخاص بك">
+
+        <label>صورة التشكيلة (رابط الصورة أو رفع):</label>
+        <input type="text" id="squad_image_url" placeholder="رابط صورة التشكيلة">
+
+        <label>كلمة تحفيزية / وصية للمنافس:</label>
+        <textarea id="tawseya" rows="3" placeholder="اكتب كلمتك الاستفزازية أو التحفيزية..."></textarea>
+
+        <button type="submit">إتمام التسجيل</button>
+    </form>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

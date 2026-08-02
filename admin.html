@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم الأدمن - البطولة</title>
+    <style>
+        body { font-family: Tahoma, sans-serif; background: #0f172a; color: #fff; padding: 20px; margin: 0; }
+        .container { max-width: 800px; margin: auto; background: #1e293b; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        h2 { text-align: center; color: #38bdf8; }
+        .btn-random { background: #f59e0b; color: #000; padding: 12px 20px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 20px; }
+        .btn-random:hover { background: #d97706; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #0f172a; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px; text-align: center; border-bottom: 1px solid #334155; }
+        th { background: #334155; color: #38bdf8; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>لوحة تحكم المنظم (الأدمن)</h2>
+    
+    <button class="btn-random" onclick="generateBracket()">⚡ بدء القرعة العشوائية للبطولة</button>
+
+    <h3>قائمة اللاعبين المسجلين:</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>الاسم</th>
+                <th>رقم التليفون</th>
+                <th>الـ ID</th>
+                <th>الوصية / التحدي</th>
+            </tr>
+        </thead>
+        <tbody id="playersTableBody">
+            <!-- هينزل هنا اللاعبين أوتوماتيك -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+const SUPABASE_URL = "https://pudnffhwusacrquqcjei.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_Sveiq2WcgtBoIa7KMjlK3g_MCFXLVjK";
+
+// دالة لجلب وعرض اللاعبين في جدول الأدمن
+async function loadPlayers() {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/players?select=*`, {
+        headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
+    });
+    const players = await res.json();
+    
+    const tbody = document.getElementById('playersTableBody');
+    tbody.innerHTML = '';
+
+    players.forEach(p => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${p.name}</td>
+                <td>${p.phone}</td>
+                <td>${p.game_id}</td>
+                <td>${p.tawseya || 'بدون'}</td>
+            </tr>
+        `;
+    });
+}
+
+// دالة القرعة العشوائية
+function generateBracket() {
+    alert('تم تنفيذ القرعة العشوائية وتوزيع اللاعبين في الجدول بنجاح! 🔥');
+    // هنا هنربطها بخوارزمية التوزيع العشوائي في الداتا بيز
+}
+
+// تشغيل الدالة أول ما الصفحة تفتح
+loadPlayers();
+</script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جدول وبث البطولة الحية</title>
+    <style>
+        body { font-family: Tahoma, sans-serif; background: #0f172a; color: #fff; padding: 20px; margin: 0; }
+        .container { max-width: 900px; margin: auto; }
+        .stream-box { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); text-align: center; }
+        .stream-container { position: relative; width: 100%; padding-bottom: 56.25%; height: 0; }
+        .stream-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 8px; border: none; }
+        h2, h3 { color: #38bdf8; text-align: center; }
+        .matches-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
+        .match-card { background: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #334155; position: relative; }
+        .match-card h4 { margin: 0 0 10px 0; color: #f59e0b; text-align: center; }
+        .player-vs { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 16px; margin-bottom: 10px; }
+        .tawseya-box { background: #0f172a; padding: 8px; border-radius: 6px; font-size: 13px; color: #94a3b8; text-align: center; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🎮 بث وبطولة الجيمنج الحية</h2>
+
+    <!-- شاشة بث اليوتيوب الخاصة بالمنظم -->
+    <div class="stream-box">
+        <h3>بث المنظم المباشر على اليوتيوب</h3>
+        <div class="stream-container">
+            <!-- استبدل رابط فيديو اليوتيوب برابط بث المنظم الفعلي -->
+            <iframe src="https://www.youtube.com/embed/LIVE_STREAM_ID_HERE" allowfullscreen></iframe>
+        </div>
+    </div>
+
+    <h3>جدول ومباريات البطولة</h3>
+    <div class="matches-grid" id="matchesContainer">
+        <!-- الماتشات والوصايا هتنزل هنا أوتوماتيك -->
+    </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://pudnffhwusacrquqcjei.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_Sveiq2WcgtBoIa7KMjlK3g_MCFXLVjK";
+
+// دالة لجلب المباريات واللعيبة وعرضها
+async function loadBrackets() {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/players?select=*`, {
+        headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
+    });
+    const players = await res.json();
+    
+    const container = document.getElementById('matchesContainer');
+    container.innerHTML = '';
+
+    // عرض اللعيبة في شكل مواجهات (كل لاعبين قصاد بعض كمثال افتراضي)
+    for (let i = 0; i < players.length; i += 2) {
+        let p1 = players[i];
+        let p2 = players[i+1] ? players[i+1] : { name: 'في انتظار خصم...', tawseya: '...' };
+
+        container.innerHTML += `
+            <div class="match-card">
+                <h4>المباراة #${(i/2) + 1}</h4>
+                <div class="player-vs">
+                    <span>${p1.name}</span>
+                    <span style="color: #ef4444;">VS</span>
+                    <span>${p2.name}</span>
+                </div>
+                <div class="tawseya-box">
+                    💬 وصية ${p1.name}: "${p1.tawseya || 'لا توجد وصية'}"
+                </div>
+            </div>
+        `;
+    }
+}
+
+loadBrackets();
+</script>
+</body>
+</html>
