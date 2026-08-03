@@ -3,38 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>جدول وبث البطولة الحية</title>
+    <title>🎮 بث وبطولة الجيمنج الحية</title>
     <style>
-        body { font-family: Tahoma, sans-serif; background: #0f172a; color: #fff; padding: 20px; margin: 0; }
-        .container { max-width: 900px; margin: auto; }
-        .stream-box { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); text-align: center; }
-        .stream-container { position: relative; width: 100%; padding-bottom: 56.25%; height: 0; }
-        .stream-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 8px; border: none; }
-        h2, h3 { color: #38bdf8; text-align: center; }
-        .matches-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
-        .match-card { background: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #334155; position: relative; }
-        .match-card h4 { margin: 0 0 10px 0; color: #f59e0b; text-align: center; }
-        .player-vs { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 16px; margin-bottom: 10px; }
-        .tawseya-box { background: #0f172a; padding: 8px; border-radius: 6px; font-size: 13px; color: #94a3b8; text-align: center; font-style: italic; }
+        :root {
+            --bg-color: #07090e;
+            --card-bg: #111827;
+            --accent-color: #3b82f6;
+            --danger-color: #ef4444;
+            --text-main: #f3f4f6;
+            --border-color: #1f2937;
+        }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg-color); color: var(--text-main); padding: 20px; margin: 0; }
+        .container { max-width: 1000px; margin: auto; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { color: #60a5fa; margin-bottom: 5px; font-size: 28px; }
+        
+        .card { background: var(--card-bg); padding: 20px; border-radius: 16px; border: 1px solid var(--border-color); margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        
+        /* شاشة البث */
+        .stream-container { position: relative; width: 100%; padding-bottom: 56.25%; height: 0; background: #000; border-radius: 12px; overflow: hidden; }
+        .stream-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+
+        /* جدول المواجهات */
+        .matchup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-top: 15px; }
+        .match-card { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .match-header { font-size: 12px; color: #94a3b8; margin-bottom: 8px; font-weight: bold; text-transform: uppercase; }
+        .vs-container { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .player-box { flex: 1; background: #1e293b; padding: 12px; border-radius: 8px; text-align: center; }
+        .player-box b { color: #60a5fa; display: block; font-size: 16px; margin-bottom: 4px; }
+        .vs-badge { background: var(--danger-color); color: white; padding: 6px 10px; border-radius: 50%; font-weight: 900; font-size: 12px; }
+        .tawseya-text { margin-top: 10px; font-size: 13px; color: #facc15; font-style: italic; text-align: center; background: rgba(250,204,21,0.05); padding: 6px; border-radius: 6px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🎮 بث وبطولة الجيمنج الحية</h2>
+    <div class="header">
+        <h1>🎮 بث وبطولة الجيمنج الحية</h1>
+        <p style="color: #9ca3af;">تابع مباريات البطولة، جدول المواجهات، والبث المباشر للمنظم لحظة بلحظة</p>
+    </div>
 
-    <!-- شاشة بث اليوتيوب الخاصة بالمنظم -->
-    <div class="stream-box">
-        <h3>بث المنظم المباشر على اليوتيوب</h3>
+    <!-- بث المنظم المباشر -->
+    <div class="card">
+        <h3 style="color: #60a5fa; margin-top: 0; text-align: center;">🔴 بث المنظم المباشر</h3>
         <div class="stream-container">
-            <!-- استبدل رابط فيديو اليوتيوب برابط بث المنظم الفعلي -->
-            <iframe src="https://www.youtube.com/embed/LIVE_STREAM_ID_HERE" allowfullscreen></iframe>
+            <!-- حط رابط بث اليوتيوب هنا (استبدل dQw4w9WgXcQ برابط بثك الحقيقي) -->
+            <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
         </div>
     </div>
 
-    <h3>جدول ومباريات البطولة</h3>
-    <div class="matches-grid" id="matchesContainer">
-        <!-- الماتشات والوصايا هتنزل هنا أوتوماتيك -->
+    <!-- جدول ومباريات البطولة -->
+    <div class="card">
+        <h3 style="color: #60a5fa; margin-top: 0; text-align: center;">🏆 جدول مباريات البطولة الحية</h3>
+        <div class="matchup-grid" id="liveBracketContainer">
+            <p style="color: #9ca3af; text-align: center; grid-column: 1 / -1;">جاري تحميل جدول المواجهات...</p>
+        </div>
     </div>
 </div>
 
@@ -42,41 +65,65 @@
 const SUPABASE_URL = "https://pudnffhwusacrquqcjei.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Sveiq2WcgtBoIa7KMjlK3g_MCFXLVjK";
 
-// دالة لجلب المباريات واللعيبة وعرضها
-async function loadBrackets() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/players?select=*`, {
-        headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+async function loadLiveBracket() {
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/players?select=*`, {
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        const players = await res.json();
+        const container = document.getElementById('liveBracketContainer');
+
+        if (!players || players.length < 2) {
+            container.innerHTML = `<p style="color: #9ca3af; text-align: center; grid-column: 1 / -1;">لا توجد مواجهات كافية حالياً في البطولة.</p>`;
+            return;
         }
-    });
-    const players = await res.json();
-    
-    const container = document.getElementById('matchesContainer');
-    container.innerHTML = '';
 
-    // عرض اللعيبة في شكل مواجهات (كل لاعبين قصاد بعض كمثال افتراضي)
-    for (let i = 0; i < players.length; i += 2) {
-        let p1 = players[i];
-        let p2 = players[i+1] ? players[i+1] : { name: 'في انتظار خصم...', tawseya: '...' };
+        // خلط عشوائي للمواجهات
+        let arr = [...players].sort(() => Math.random() - 0.5);
+        container.innerHTML = '';
 
-        container.innerHTML += `
-            <div class="match-card">
-                <h4>المباراة #${(i/2) + 1}</h4>
-                <div class="player-vs">
-                    <span>${p1.name}</span>
-                    <span style="color: #ef4444;">VS</span>
-                    <span>${p2.name}</span>
-                </div>
-                <div class="tawseya-box">
-                    💬 وصية ${p1.name}: "${p1.tawseya || 'لا توجد وصية'}"
-                </div>
-            </div>
-        `;
+        let matchNum = 1;
+        for (let i = 0; i < arr.length; i += 2) {
+            const p1 = arr[i];
+            const p2 = arr[i+1];
+
+            if (p2) {
+                container.innerHTML += `
+                    <div class="match-card">
+                        <div class="match-header">المباراة #${matchNum}</div>
+                        <div class="vs-container">
+                            <div class="player-box">
+                                <b>${p1.name}</b>
+                                <span style="font-size:11px; color:#94a3b8;">ID: ${p1.game_id}</span>
+                            </div>
+                            <div class="vs-badge">VS</div>
+                            <div class="player-box">
+                                <b>${p2.name}</b>
+                                <span style="font-size:11px; color:#94a3b8;">ID: ${p2.game_id}</span>
+                            </div>
+                        </div>
+                        ${p1.tawseya ? `<div class="tawseya-text">💬 وصية ${p1.name}: "${p1.tawseya}"</div>` : ''}
+                    </div>
+                `;
+            } else {
+                container.innerHTML += `
+                    <div class="match-card" style="border-color: #10b981;">
+                        <div class="match-header" style="color: #10b981;">تأهل مباشر (Bye)</div>
+                        <div style="text-align: center; padding: 10px;">
+                            <b style="color: #60a5fa; font-size: 16px;">${p1.name}</b>
+                            <p style="font-size: 12px; color: #9ca3af; margin: 5px 0 0 0;">صعد للدور التالي تلقائياً لعدم وجود منافس.</p>
+                        </div>
+                    </div>
+                `;
+            }
+            matchNum++;
+        }
+    } catch (err) {
+        console.error(err);
     }
 }
 
-loadBrackets();
+loadLiveBracket();
 </script>
 </body>
 </html>
