@@ -30,7 +30,7 @@
 
     <!-- قسم إنشاء البطولة -->
     <div class="card">
-        <h3>إنشاء بطولة جديدة</h3>
+        <h3>إنشاء بطولة جديدة وبث مباشر</h3>
         <form id="createTourForm">
             <div class="form-group">
                 <label>اسم البطولة:</label>
@@ -43,6 +43,10 @@
             <div class="form-group">
                 <label>الحد الأقصى لعدد اللاعبين:</label>
                 <input type="number" id="tMax" value="16" required>
+            </div>
+            <div class="form-group">
+                <label>رابط بث اليوتيوب المباشر (Embed URL):</label>
+                <input type="text" id="tStream" placeholder="https://www.youtube.com/embed/xxxxxx">
             </div>
             <button type="submit" class="btn-main">🚀 إطلاق البطولة الآن</button>
         </form>
@@ -101,12 +105,13 @@ async function auth() {
     } else { auth(); }
 }
 
-// إنشاء بطولة جديدة
+// إنشاء بطولة جديدة مع رابط البث
 document.getElementById('createTourForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const title = document.getElementById('tTitle').value;
     const game_name = document.getElementById('tGame').value;
     const max_players = parseInt(document.getElementById('tMax').value);
+    const stream_url = document.getElementById('tStream').value;
 
     try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments`, {
@@ -121,12 +126,13 @@ document.getElementById('createTourForm').addEventListener('submit', async (e) =
                 title: title, 
                 game_name: game_name, 
                 max_players: max_players, 
-                status: 'open' 
+                status: 'open',
+                stream_url: stream_url 
             })
         });
 
         if (res.ok) {
-            Swal.fire('نجاح', 'تم إطلاق البطولة بنجاح!', 'success');
+            Swal.fire('نجاح', 'تم إطلاق البطولة وحفظ رابط البث بنجاح!', 'success');
             document.getElementById('createTourForm').reset();
             loadTours();
         } else {
