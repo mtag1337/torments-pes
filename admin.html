@@ -69,13 +69,16 @@
         <div id="tList">جاري التحميل...</div>
     </div>
 
-    <!-- قسم القرعة العشوائية الحماسية -->
+    <!-- قسم القرعة العشوائية الحماسية والانتقال للمراحل التالية -->
     <div class="card" style="background: #1e1b4b; text-align: center;">
-        <h3>🎲 نظام القرعة العشوائية للمواجهات</h3>
+        <h3>🎲 نظام القرعة العشوائية وإدارة المراحل</h3>
         <div class="form-group" style="max-width: 400px; margin: 10px auto;">
-            <select id="drawSelect"><option value="">اختر البطولة لإجراء القرعة...</option></select>
+            <select id="drawSelect"><option value="">اختر البطولة للتحكم...</option></select>
         </div>
-        <button onclick="runAndSaveDraw()" class="btn-main" style="background: #10b981; max-width: 400px; margin: auto;">بدء القرعة عشوائياً وحفظها 🔥</button>
+        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; max-width: 500px; margin: auto;">
+            <button onclick="runAndSaveDraw()" class="btn-main" style="background: #10b981; flex: 1; min-width: 200px; margin-top: 0;">بدء القرعة الأولى 🔥</button>
+            <button onclick="advanceToNextRound()" class="btn-main" style="background: #8b5cf6; flex: 1; min-width: 200px; margin-top: 0;">⚡ الانتقال للمرحلة التالية</button>
+        </div>
         <div id="drawResult" style="margin-top: 15px; text-align: right;"></div>
     </div>
 
@@ -198,11 +201,11 @@ async function loadTours() {
                 </div>
             </div>
         `).join('');
-        document.getElementById('drawSelect').innerHTML = '<option value="">اختر البطولة للقرعة...</option>' + globalTournaments.map(t => `<option value="${t.id}">${t.title}</option>`).join('');
+        document.getElementById('drawSelect').innerHTML = '<option value="">اختر البطولة للتحكم...</option>' + globalTournaments.map(t => `<option value="${t.id}">${t.title}</option>`).join('');
     }
 }
 
-// نافذة متابعة البطولة واختيار الفائزين للمواجهات (معدلة ومحدثة تماماً لتظهر أي خطأ)
+// نافذة متابعة البطولة واختيار الفائزين للمواجهات
 async function openTournamentTracker(tourId, tourTitle) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/matches?tournament_id=eq.${tourId}&select=*`, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
@@ -252,7 +255,6 @@ async function openTournamentTracker(tourId, tourTitle) {
         cancelButtonText: 'إغلاق'
     });
 
-    // تنفيذ الحفظ خارج preConfirm لضمان عدم حدوث أي تجميد صامت
     if (result.isConfirmed) {
         let updates = [];
         const selects = document.querySelectorAll('.match-winner-select');
@@ -274,7 +276,6 @@ async function openTournamentTracker(tourId, tourTitle) {
             return;
         }
 
-        // إظهار نافذة تحميل أثناء الحفظ
         Swal.fire({
             title: 'جاري حفظ النتائج...',
             allowOutsideClick: false,
@@ -301,14 +302,12 @@ async function openTournamentTracker(tourId, tourTitle) {
 
                 if (!patchRes.ok) {
                     const errorData = await patchRes.json();
-                    console.error("خطأ من سوبابيس:", errorData);
                     throw new Error(errorData.message || patchRes.statusText);
                 }
             }
 
             Swal.fire('تم الحفظ بنجاح! 🔥', 'تم تحديث نتائج المباريات، وستظهر في شجرة البطولة.', 'success');
         } catch (err) {
-            console.error("خطأ عام أثناء الحفظ:", err);
             Swal.fire('خطأ في الحفظ', 'حدث خطأ أثناء الاتصال بقاعدة البيانات: ' + err.message, 'error');
         }
     }
@@ -531,7 +530,7 @@ async function del(id) {
     }
 }
 
-// نظام القرعة العشوائية
+// نظام القرعة العشوائية الأولى
 async function runAndSaveDraw() {
     const tId = document.getElementById('drawSelect').value;
     if(!tId) { Swal.fire('تنبيه', 'اختر البطولة أولاً', 'warning'); return; }
@@ -600,6 +599,101 @@ async function runAndSaveDraw() {
 
     document.getElementById('drawResult').innerHTML = html;
     Swal.fire('تمت القرعة والحفظ بنجاح! 🔥', 'تم توليد وتثبيت المواجهات في شجرة البطولة.', 'success');
+}
+
+// ميزة الانتقال للمرحلة التالية (تأهيل الفائزين واستبعاد الخاسرين وتوزيع المباريات الجديدة)
+async function advanceToNextRound() {
+    try {
+        const tourId = document.getElementById('drawSelect').value;
+        if (!tourId) {
+            Swal.fire('تنبيه', 'برجاء اختيار البطولة من قائمة القرعة أولاً.', 'warning');
+            return;
+        }
+
+        // أ. جلب مواجهات البطولة الحالية
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/matches?tournament_id=eq.${tourId}&select=*`, {
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        const matches = await res.json();
+
+        if (!matches || matches.length === 0) {
+            Swal.fire('تنبيه', 'لا توجد مواجهات مسجلة لهذه البطولة.', 'warning');
+            return;
+        }
+
+        // ب. التأكد من انتهاء جميع المباريات الحالية وتحديد فائزين لها
+        const uncompleted = matches.filter(m => m.status !== 'completed' && m.player2_id !== null);
+        if (uncompleted.length > 0) {
+            Swal.fire('تنبيه', 'لا يمكن الانتقال للمرحلة التالية حتى يتم تحديد الفائزين في جميع المواجهات الحالية!', 'error');
+            return;
+        }
+
+        // ج. تجميع IDs الفائزين فقط (استبعاد الخاسرين تلقائياً)
+        let winnersIds = [];
+        matches.forEach(m => {
+            if (m.winner_id) {
+                winnersIds.push(m.winner_id);
+            }
+        });
+
+        if (winnersIds.length <= 1) {
+            Swal.fire('تهانينا! 🏆', 'لقد تم حسم بطل البطولة النهائي أو لم يتبق سوى متأهل واحد!', 'success');
+            return;
+        }
+
+        // د. عمل قرعة عشوائية جديدة للفائزين
+        let shuffledWinners = [...winnersIds].sort(() => Math.random() - 0.5);
+        let nextRoundMatches = [];
+        
+        let nextRoundName = shuffledWinners.length === 2 ? 'النهائي 🏆' : (shuffledWinners.length <= 4 ? 'نصف النهائي' : 'دور الـ ' + shuffledWinners.length);
+
+        for (let i = 0; i < shuffledWinners.length; i += 2) {
+            let player1 = shuffledWinners[i];
+            let player2 = shuffledWinners[i+1] || null;
+
+            if (player2) {
+                nextRoundMatches.push({
+                    tournament_id: parseInt(tourId),
+                    round_name: nextRoundName,
+                    player1_id: player1,
+                    player2_id: player2,
+                    winner_id: null,
+                    status: 'pending'
+                });
+            } else {
+                nextRoundMatches.push({
+                    tournament_id: parseInt(tourId),
+                    round_name: nextRoundName,
+                    player1_id: player1,
+                    player2_id: null,
+                    winner_id: player1,
+                    status: 'completed'
+                });
+            }
+        }
+
+        // هـ. إرسال مباريات المرحلة الجديدة لقاعدة البيانات
+        const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/matches`, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(nextRoundMatches)
+        });
+
+        if (insertRes.ok) {
+            Swal.fire('تم بنجاح! 🚀', `تم إقصاء الخاسرين وتأهيل الفائزين وعمل قرعة (${nextRoundName}) وتوليد المباريات الجديدة بنجاح.`, 'success');
+        } else {
+            const err = await insertRes.json();
+            Swal.fire('خطأ', 'فشل الانتقال للمرحلة التالية: ' + (err.message || ''), 'error');
+        }
+    } catch (error) {
+        console.error(error);
+        Swal.fire('خطأ!', 'حدث خطأ غير متوقع أثناء الانتقال للمرحلة التالية.', 'error');
+    }
 }
 
 auth();
