@@ -15,12 +15,14 @@
         input, select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #374151; background: #0d1322; color: #fff; box-sizing: border-box; }
         .btn-main { background: #2563eb; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; margin-top: 10px; transition: 0.3s; }
         .btn-main:hover { background: #1d4ed8; }
-        .btn-danger { background: #dc2626; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-danger { background: #dc2626; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; }
+        .btn-danger:hover { background: #b91c1c; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #0d1322; border-radius: 6px; overflow: hidden; }
         th, td { padding: 10px; text-align: center; border-bottom: 1px solid #1f2937; font-size: 14px; }
         th { background: #1f2937; color: #60a5fa; }
         img.squad-thumb { width: 45px; height: 45px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid #3b82f6; }
         img.squad-thumb:hover { transform: scale(1.1); }
+        .tour-item { background: #0d1322; padding: 10px 15px; margin-bottom: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #1f2937; }
     </style>
 </head>
 <body>
@@ -45,8 +47,8 @@
                 <input type="number" id="tMax" value="16" required>
             </div>
             <div class="form-group">
-                <label>رابط بث اليوتيوب المباشر (Embed URL):</label>
-                <input type="text" id="tStream" placeholder="https://www.youtube.com/embed/xxxxxx">
+                <label>رابط بث اليوتيوب (يقبل الرابط العادي أو الـ Embed):</label>
+                <input type="text" id="tStream" placeholder="https://www.youtube.com/watch?v=xxxxxx">
             </div>
             <button type="submit" class="btn-main">🚀 إطلاق البطولة الآن</button>
         </form>
@@ -105,13 +107,35 @@ async function auth() {
     } else { auth(); }
 }
 
-// إنشاء بطولة جديدة مع رابط البث
+// دالة ذكية لتحويل رابط يوتيوب العادي إلى صيغة الـ Embed تلقائياً
+function formatYoutubeUrl(url) {
+    if (!url) return '';
+    url = url.trim();
+    if (url.includes('/embed/')) return url;
+    
+    let videoId = '';
+    if (url.includes('youtu.be/')) {
+        videoId = url.split('youtu.be/')[1].split('?')[0];
+    } else if (url.includes('watch?v=')) {
+        videoId = url.split('watch?v=')[1].split('&')[0];
+    }
+    
+    if (videoId) {
+        return `https://www.youtube.com/embed/${videoId}`;
+    }
+    return url;
+}
+
+// إنشاء بطولة جديدة مع رابط البث المتحول تلقائياً
 document.getElementById('createTourForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const title = document.getElementById('tTitle').value;
     const game_name = document.getElementById('tGame').value;
     const max_players = parseInt(document.getElementById('tMax').value);
-    const stream_url = document.getElementById('tStream').value;
+    const rawStream = document.getElementById('tStream').value;
+    
+    // تحويل الرابط تلقائياً
+    const stream_url = formatYoutubeUrl(rawStream);
 
     try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments`, {
@@ -146,7 +170,7 @@ document.getElementById('createTourForm').addEventListener('submit', async (e) =
     }
 });
 
-// تحميل البطولات
+// تحميل البطولات مع زر الحذف الخاص بها
 async function loadTours() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?select=*`, { 
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
@@ -154,8 +178,40 @@ async function loadTours() {
     const data = await res.json();
     
     if(Array.isArray(data)) {
-        document.getElementById('tList').innerHTML = data.map(t => `<div style="background:#0d1322; padding:10px; margin-bottom:5px; border-radius:6px; display:flex; justify-content:space-between;"><span><b>${t.title}</b> (${t.game_name}) - السعة: ${t.max_players}</span><span style="color:#10b981; font-weight:bold;">${t.status}</span></div>`).join('');
+        document.getElementById('tList').innerHTML = data.map(t => `
+            <div class="tour-item">
+                <span><b>${t.title}</b> (${t.game_name}) - السعة: ${t.max_players} | <span style="color:#10b981; font-weight:bold;">${t.status}</span></span>
+                <button class="btn-danger" onclick="deleteTournament(${t.id})">حذف البطولة 🗑️</button>
+            </div>
+        `).join('');
         document.getElementById('drawSelect').innerHTML = '<option value="">اختر البطولة للقرعة...</option>' + data.map(t => `<option value="${t.id}">${t.title}</option>`).join('');
+    }
+}
+
+// دالة حذف البطولة من القاعدة
+async function deleteTournament(tId) {
+    const confirm = await Swal.fire({ 
+        title: 'هل تريد حذف هذه البطولة؟', 
+        text: 'سيتم حذف بيانات البطولة نهائياً!', 
+        icon: 'warning', 
+        showCancelButton: true, 
+        confirmButtonText: 'نعم، احذف', 
+        cancelButtonText: 'إلغاء', 
+        background: '#111827', 
+        color: '#fff' 
+    });
+    
+    if(confirm.isConfirmed) {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?id=eq.${tId}`, { 
+            method: 'DELETE', 
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
+        });
+        if(res.ok) {
+            Swal.fire('تم الحذف', 'تم حذف البطولة بنجاح.', 'success');
+            loadTours();
+        } else {
+            Swal.fire('خطأ', 'فشل حذف البطولة.', 'error');
+        }
     }
 }
 
