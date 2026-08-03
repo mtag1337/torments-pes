@@ -204,7 +204,7 @@ async function loadTours() {
     }
 }
 
-// نافذة متابعة البطولة واختيار الفائزين للمواجهات
+// نافذة متابعة البطولة واختيار الفائزين للمواجهات (محدثة ومصححة)
 async function openTournamentTracker(tourId, tourTitle) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/matches?tournament_id=eq.${tourId}&select=*`, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
@@ -231,7 +231,7 @@ async function openTournamentTracker(tourId, tourTitle) {
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
                     <span>⚔️ <b>${p1Name}</b> ضد <b>${p2Name}</b></span>
                     ${m.player2_id !== null ? `
-                        <select id="winner-select-${m.id}" style="width: auto; padding: 6px; background: #111827; color: #fff; border: 1px solid #374151; border-radius: 4px;">
+                        <select class="match-winner-select" data-match-id="${m.id}" style="width: auto; padding: 6px; background: #111827; color: #fff; border: 1px solid #374151; border-radius: 4px;">
                             <option value="">اختر الفائز...</option>
                             <option value="${m.player1_id}" ${m.winner_id === m.player1_id ? 'selected' : ''}>${p1Name}</option>
                             <option value="${m.player2_id}" ${m.winner_id === m.player2_id ? 'selected' : ''}>${p2Name}</option>
@@ -254,17 +254,16 @@ async function openTournamentTracker(tourId, tourTitle) {
         cancelButtonText: 'إغلاق',
         preConfirm: () => {
             let updates = [];
-            matches.forEach(m => {
-                if (m.player2_id !== null) {
-                    const selectEl = document.getElementById(`winner-select-${m.id}`);
-                    if (selectEl && selectEl.value) {
-                        const winnerId = parseInt(selectEl.value);
-                        updates.push({
-                            id: m.id,
-                            winner_id: winnerId,
-                            status: 'completed'
-                        });
-                    }
+            const selects = document.querySelectorAll('.match-winner-select');
+            selects.forEach(selectEl => {
+                if (selectEl.value) {
+                    const matchId = parseInt(selectEl.getAttribute('data-match-id'));
+                    const winnerId = parseInt(selectEl.value);
+                    updates.push({
+                        id: matchId,
+                        winner_id: winnerId,
+                        status: 'completed'
+                    });
                 }
             });
             return updates;
