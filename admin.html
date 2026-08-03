@@ -17,13 +17,17 @@
         .btn-main:hover { background: #1d4ed8; }
         .btn-danger { background: #dc2626; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; }
         .btn-danger:hover { background: #b91c1c; }
+        .btn-edit { background: #3b82f6; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; }
+        .btn-edit:hover { background: #2563eb; }
+        .btn-bracket { background: #10b981; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold; display: inline-block; transition: 0.2s; }
+        .btn-bracket:hover { background: #059669; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #0d1322; border-radius: 6px; overflow: hidden; }
         th, td { padding: 10px; text-align: center; border-bottom: 1px solid #1f2937; font-size: 14px; }
         th { background: #1f2937; color: #60a5fa; }
         img.squad-thumb { width: 45px; height: 45px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid #3b82f6; }
         img.squad-thumb:hover { transform: scale(1.1); }
         .tour-item { background: #0d1322; padding: 10px 15px; margin-bottom: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #1f2937; flex-wrap: wrap; gap: 10px; }
-        .tour-actions { display: flex; gap: 8px; align-items: center; }
+        .tour-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
     </style>
 </head>
 <body>
@@ -179,7 +183,7 @@ document.getElementById('createTourForm').addEventListener('submit', async (e) =
     }
 });
 
-// تحميل البطولات مع زر الحذف وزر "عرض الشجرة" المرئي الجديد
+// تحميل البطولات مع زر التعديل، زر الشجرة، وزر الحذف
 async function loadTours() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?select=*`, { 
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
@@ -191,12 +195,76 @@ async function loadTours() {
             <div class="tour-item">
                 <span><b>${t.title}</b> (${t.game_name}) - السعة: ${t.max_players} | <span style="color:#10b981; font-weight:bold;">${t.status}</span></span>
                 <div class="tour-actions">
-                    <a href="bracket.html?id=${t.id}" target="_blank" class="btn-main" style="padding:6px 12px; font-size:12px; text-decoration:none; display:inline-block; width:auto; background:#10b981; margin-top:0;">📊 عرض الشجرة</a>
+                    <a href="bracket.html?id=${t.id}" target="_blank" class="btn-bracket">📊 الشجرة</a>
+                    <button class="btn-edit" onclick="openEditTournamentModal(${t.id}, '${t.title}', '${t.game_name}', ${t.max_players}, '${t.stream_url || ''}')">تعديل ✏️</button>
                     <button class="btn-danger" onclick="deleteTournament(${t.id})">حذف 🗑️</button>
                 </div>
             </div>
         `).join('');
         document.getElementById('drawSelect').innerHTML = '<option value="">اختر البطولة للقرعة...</option>' + data.map(t => `<option value="${t.id}">${t.title}</option>`).join('');
+    }
+}
+
+// نافذة تعديل بيانات البطولة باستخدام SweetAlert2
+async function openEditTournamentModal(id, currentTitle, currentGame, currentMax, currentStream) {
+    const { value: formValues } = await Swal.fire({
+        title: 'تعديل بيانات البطولة',
+        background: '#111827',
+        color: '#fff',
+        html: `
+            <div style="text-align: right; margin-bottom: 10px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">اسم البطولة:</label>
+                <input id="swal-tour-title" class="swal2-input" value="${currentTitle}" style="width:90%; margin:0; background:#0d1322; color:#fff; border:1px solid #374151;">
+            </div>
+            <div style="text-align: right; margin-bottom: 10px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">اسم اللعبة:</label>
+                <input id="swal-tour-game" class="swal2-input" value="${currentGame}" style="width:90%; margin:0; background:#0d1322; color:#fff; border:1px solid #374151;">
+            </div>
+            <div style="text-align: right; margin-bottom: 10px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">الحد الأقصى للاعبين:</label>
+                <input type="number" id="swal-tour-max" class="swal2-input" value="${currentMax}" style="width:90%; margin:0; background:#0d1322; color:#fff; border:1px solid #374151;">
+            </div>
+            <div style="text-align: right; margin-bottom: 10px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">رابط البث (يوتيوب):</label>
+                <input id="swal-tour-stream" class="swal2-input" value="${currentStream}" style="width:90%; margin:0; background:#0d1322; color:#fff; border:1px solid #374151;">
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'حفظ التعديلات',
+        cancelButtonText: 'إلغاء',
+        preConfirm: () => {
+            return {
+                title: document.getElementById('swal-tour-title').value,
+                game_name: document.getElementById('swal-tour-game').value,
+                max_players: parseInt(document.getElementById('swal-tour-max').value),
+                stream_url: formatYoutubeUrl(document.getElementById('swal-tour-stream').value)
+            }
+        }
+    });
+
+    if (formValues) {
+        try {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?id=eq.${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                },
+                body: JSON.stringify(formValues)
+            });
+
+            if (res.ok) {
+                Swal.fire('تم التعديل!', 'تم تحديث بيانات البطولة بنجاح.', 'success');
+                loadTours();
+            } else {
+                throw new Error('فشل تحديث البطولة في قاعدة البيانات');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('خطأ!', 'حدث خطأ أثناء محاولة تعديل البطولة.', 'error');
+        }
     }
 }
 
@@ -243,9 +311,75 @@ async function loadPlayers() {
             <td><code>${p.game_id}</code></td>
             <td><img src="${p.squad_image_url}" class="squad-thumb" onclick="window.open('${p.squad_image_url}', '_blank')"></td>
             <td style="color:#facc15; font-style:italic;">"${p.tawseya || 'بدون'}"</td>
-            <td><button class="btn-danger" onclick="del(${p.id})">حذف</button></td>
+            <td>
+                <button class="btn-edit" onclick="openEditPlayerModal(${p.id}, '${p.name}', '${p.phone}', '${p.game_id}', '${p.tawseya || ''}')">تعديل ✏️</button>
+                <button class="btn-danger" onclick="del(${p.id})">حذف 🗑️</button>
+            </td>
         </tr>
     `).join('');
+}
+
+// نافذة تعديل بيانات اللاعب باستخدام SweetAlert2
+async function openEditPlayerModal(id, currentName, currentPhone, currentGameId, currentTawseya) {
+    const { value: formValues } = await Swal.fire({
+        title: 'تعديل بيانات اللاعب',
+        background: '#111827',
+        color: '#fff',
+        html: `
+            <div style="text-align: right; margin-bottom: 10px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">اسم اللاعب:</label>
+                <input id="swal-input-name" class="swal2-input" value="${currentName}" style="width:90%; margin:0; background:#0d1322; color:#fff; border:1px solid #374151;">
+            </div>
+            <div style="text-align: right; margin-bottom: 10px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">رقم التليفون:</label>
+                <input id="swal-input-phone" class="swal2-input" value="${currentPhone}" style="width:90%; margin:0; background:#0d1322; color:#fff; border:1px solid #374151;">
+            </div>
+            <div style="text-align: right; margin-bottom: 10px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">رقم الـ ID:</label>
+                <input id="swal-input-gameid" class="swal2-input" value="${currentGameId}" style="width:90%; margin:0; background:#0d1322; color:#fff; border:1px solid #374151;">
+            </div>
+            <div style="text-align: right; margin-bottom: 10px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">الوصية:</label>
+                <input id="swal-input-tawseya" class="swal2-input" value="${currentTawseya}" style="width:90%; margin:0; background:#0d1322; color:#fff; border:1px solid #374151;">
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'حفظ التعديلات',
+        cancelButtonText: 'إلغاء',
+        preConfirm: () => {
+            return {
+                name: document.getElementById('swal-input-name').value,
+                phone: document.getElementById('swal-input-phone').value,
+                game_id: document.getElementById('swal-input-gameid').value,
+                tawseya: document.getElementById('swal-input-tawseya').value
+            }
+        }
+    });
+
+    if (formValues) {
+        try {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/players?id=eq.${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                },
+                body: JSON.stringify(formValues)
+            });
+
+            if (res.ok) {
+                Swal.fire('تم التعديل!', 'تم تحديث بيانات اللاعب بنجاح.', 'success');
+                loadPlayers();
+            } else {
+                throw new Error('فشل التحديث في قاعدة البيانات');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('خطأ!', 'حدث خطأ أثناء محاولة تعديل البيانات.', 'error');
+        }
+    }
 }
 
 // حذف لاعب
