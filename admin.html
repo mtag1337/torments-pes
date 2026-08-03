@@ -107,8 +107,8 @@
 const SUPABASE_URL = "https://pudnffhwusacrquqcjei.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Sveiq2WcgtBoIa7KMjlK3g_MCFXLVjK";
 
-let globalTournaments = []; // مصفوفة لتخزين البطولات المتاحة للربط مع اللاعبين
-let globalPlayers = [];    // مصفوفة لتخزين اللاعبين لتسهيل جلب بياناتهم في المتابعة
+let globalTournaments = []; 
+let globalPlayers = [];     
 
 // حماية الباسورد
 async function auth() {
@@ -168,14 +168,16 @@ document.getElementById('createTourForm').addEventListener('submit', async (e) =
             loadTours();
         } else {
             const errData = await res.json();
-            Swal.fire('خطأ', `فشل إنشاء البطولة: ${errData.message || 'خطأ غير معروف'}`, 'error');
+            console.error("تفاصيل خطأ إنشاء البطولة:", errData);
+            Swal.fire('خطأ', `فشل إنشاء البطولة: ${errData.message || res.statusText}`, 'error');
         }
     } catch (err) {
+        console.error("خطأ شبكة:", err);
         Swal.fire('خطأ', 'حدث خطأ في الاتصال بالشبكة.', 'error');
     }
 });
 
-// تحميل البطولات مع زر المتابعة الجديد
+// تحميل البطولات
 async function loadTours() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?select=*`, { 
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
@@ -202,9 +204,8 @@ async function loadTours() {
     }
 }
 
-// دالة نافذة متابعة البطولة واختيار الفائزين للمواجهات
+// نافذة متابعة البطولة واختيار الفائزين للمواجهات
 async function openTournamentTracker(tourId, tourTitle) {
-    // جلب مواجهات هذه البطولة
     const res = await fetch(`${SUPABASE_URL}/rest/v1/matches?tournament_id=eq.${tourId}&select=*`, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
     });
@@ -215,7 +216,6 @@ async function openTournamentTracker(tourId, tourTitle) {
         return;
     }
 
-    // بناء واجهة عرض المواجهات داخل SweetAlert2
     let matchesHtml = `<div style="max-height: 400px; overflow-y: auto; text-align: right; padding: 5px;">`;
     
     matches.forEach((m, index) => {
@@ -272,30 +272,38 @@ async function openTournamentTracker(tourId, tourTitle) {
     });
 
     if (isConfirmed && isConfirmed.length > 0) {
-        // تحديث كل مباراة تم اختيار الفائز لها في قاعدة البيانات
         try {
             for (let update of isConfirmed) {
-                await fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${update.id}`, {
+                const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${update.id}`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Prefer': 'return=representation'
                     },
                     body: JSON.stringify({
                         winner_id: update.winner_id,
                         status: update.status
                     })
                 });
+
+                if (!patchRes.ok) {
+                    const errorData = await patchRes.json();
+                    console.error("تفاصيل خطأ سوبابيس (التحديث):", errorData);
+                    alert("حدث خطأ أثناء تحديث النتيجة: " + (errorData.message || patchRes.statusText));
+                    return;
+                }
             }
             Swal.fire('تم الحفظ!', 'تم تحديث نتائج المباريات بنجاح، وستظهر في شجرة البطولة.', 'success');
         } catch (err) {
+            console.error("خطأ شبكة:", err);
             Swal.fire('خطأ', 'حدث خطأ أثناء حفظ النتائج.', 'error');
         }
     }
 }
 
-// نافذة تعديل البطولة مع التحكم في الحالة ورابط البث
+// نافذة تعديل البطولة
 async function openEditTournamentModal(id, currentTitle, currentGame, currentMax, currentStream, currentStatus) {
     const { value: formValues } = await Swal.fire({
         title: 'تعديل بيانات البطولة',
@@ -349,7 +357,8 @@ async function openEditTournamentModal(id, currentTitle, currentGame, currentMax
                 headers: {
                     'Content-Type': 'application/json',
                     'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    'Prefer': 'return=representation'
                 },
                 body: JSON.stringify(formValues)
             });
@@ -359,15 +368,17 @@ async function openEditTournamentModal(id, currentTitle, currentGame, currentMax
                 loadTours();
                 loadPlayers();
             } else {
-                throw new Error('فشل تحديث البطولة');
+                const errData = await res.json();
+                console.error("تفاصيل خطأ تحديث البطولة:", errData);
+                throw new Error(errData.message || 'فشل تحديث البطولة');
             }
         } catch (err) {
-            Swal.fire('خطأ!', 'حدث خطأ أثناء محاولة تعديل البطولة.', 'error');
+            Swal.fire('خطأ!', 'حدث خطأ أثناء محاولة تعديل البطولة: ' + err.message, 'error');
         }
     }
 }
 
-// دالة حذف البطولة
+// حذف البطولة
 async function deleteTournament(tId) {
     const confirm = await Swal.fire({ 
         title: 'هل تريد حذف هذه البطولة؟', 
@@ -395,7 +406,7 @@ async function deleteTournament(tId) {
     }
 }
 
-// تحميل اللاعبين وتخزينهم في المتغير العام
+// تحميل اللاعبين
 async function loadPlayers() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/players?select=*`, { 
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
@@ -424,7 +435,7 @@ async function loadPlayers() {
     }).join('');
 }
 
-// نافذة تعديل بيانات اللاعب مع إمكانية تغيير وتحديد البطولة المشارك بها
+// نافذة تعديل بيانات اللاعب
 async function openEditPlayerModal(id, currentName, currentPhone, currentGameId, currentTawseya, currentTourId) {
     let tourOptionsHtml = globalTournaments.map(t => `<option value="${t.id}" ${t.id === currentTourId ? 'selected' : ''}>${t.title}</option>`).join('');
 
@@ -479,7 +490,8 @@ async function openEditPlayerModal(id, currentName, currentPhone, currentGameId,
                 headers: {
                     'Content-Type': 'application/json',
                     'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    'Prefer': 'return=representation'
                 },
                 body: JSON.stringify(formValues)
             });
@@ -488,10 +500,12 @@ async function openEditPlayerModal(id, currentName, currentPhone, currentGameId,
                 Swal.fire('تم التعديل!', 'تم تحديث بيانات اللاعب بنجاح.', 'success');
                 loadPlayers();
             } else {
-                throw new Error('فشل التحديث');
+                const errData = await res.json();
+                console.error("تفاصيل خطأ تحديث اللاعب:", errData);
+                throw new Error(errData.message || 'فشل التحديث');
             }
         } catch (err) {
-            Swal.fire('خطأ!', 'حدث خطأ أثناء محاولة تعديل البيانات.', 'error');
+            Swal.fire('خطأ!', 'حدث خطأ أثناء محاولة تعديل البيانات: ' + err.message, 'error');
         }
     }
 }
@@ -508,7 +522,7 @@ async function del(id) {
     }
 }
 
-// نظام القرعة العشوائية مع الحفظ التلقائي في جدول المباريات (matches) لكي تظهر بالشجرة
+// نظام القرعة العشوائية مع معالجة الأخطاء والرسائل المحدثة
 async function runAndSaveDraw() {
     const tId = document.getElementById('drawSelect').value;
     if(!tId) { Swal.fire('تنبيه', 'اختر البطولة أولاً', 'warning'); return; }
@@ -519,11 +533,10 @@ async function runAndSaveDraw() {
     const players = await res.json();
     if(!players || players.length < 2) { Swal.fire('تنبيه', 'لا يوجد عدد كافٍ من اللاعبين المسجلين في هذه البطولة بالتحديد!', 'warning'); return; }
 
-    // خلط اللاعبين عشوائياً
     let arr = [...players].sort(() => Math.random() - 0.5);
     let html = '<h4 style="color:#60a5fa; margin-bottom:10px;">نتائج المواجهات الإقصائية:</h4>';
     
-    // أولاً: مسح المباريات القديمة الخاصة بالبطولة إن وجدت لمنع التكرار
+    // مسح المواجهات القديمة أولاً
     await fetch(`${SUPABASE_URL}/rest/v1/matches?tournament_id=eq.${tId}`, {
         method: 'DELETE',
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
@@ -560,23 +573,27 @@ async function runAndSaveDraw() {
         matchNum++;
     }
 
-    // إرسال المواجهات الجديدة إلى قاعدة البيانات (Supabase)
-    const saveRes = await fetch(`${SUPABASE_URL}/rest/v1/matches`, {
+    // إرسال المواجهات الجديدة مع الكود المطلوب لمعالجة الأخطاء
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/matches`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
             'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
         },
         body: JSON.stringify(matchesToInsert)
     });
 
-    if (saveRes.ok) {
-        document.getElementById('drawResult').innerHTML = html;
-        Swal.fire('تمت القرعة والحفظ بنجاح! 🔥', 'تم توليد وتثبيت المواجهات في شجرة البطولة.', 'success');
-    } else {
-        Swal.fire('خطأ', 'فشل حفظ المواجهات في قاعدة البيانات.', 'error');
+    if (!response.ok) {
+        const errorData = await response.json();
+        console.error("تفاصيل خطأ سوبابيس:", errorData); 
+        alert("حدث خطأ أثناء حفظ المباريات: " + (errorData.message || response.statusText));
+        return;
     }
+
+    document.getElementById('drawResult').innerHTML = html;
+    Swal.fire('تمت القرعة والحفظ بنجاح! 🔥', 'تم توليد وتثبيت المواجهات في شجرة البطولة.', 'success');
 }
 
 auth();
