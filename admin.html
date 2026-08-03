@@ -3,136 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة التحكم المركزية - قرعة البطولات الاسطورية</title>
+    <title>لوحة التحكم المركزية - البطولات</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        :root {
-            --bg-color: #07090e;
-            --card-bg: #111827;
-            --accent-glow: #3b82f6;
-            --danger-color: #ef4444;
-            --success-color: #10b981;
-            --text-main: #f3f4f6;
-            --border-color: #1f2937;
-        }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg-color); color: var(--text-main); padding: 20px; margin: 0; }
-        .container { max-width: 1100px; margin: auto; }
-        .card { background: var(--card-bg); padding: 25px; border-radius: 16px; border: 1px solid var(--border-color); margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+        body { font-family: Tahoma, sans-serif; background: #0b0f19; color: #f3f4f6; padding: 20px; margin: 0; }
+        .container { max-width: 950px; margin: auto; }
+        .card { background: #111827; padding: 20px; border-radius: 12px; border: 1px solid #1f2937; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         h2, h3 { color: #60a5fa; text-align: center; }
         .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
-        input, select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: #0d1322; color: var(--text-main); box-sizing: border-box; }
-        button { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; padding: 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; transition: 0.3s; box-shadow: 0 4px 15px rgba(59,130,246,0.4); }
-        button:hover { opacity: 0.9; transform: translateY(-1px); }
-        .btn-danger { background: var(--danger-color); padding: 6px 12px; font-size: 13px; width: auto; box-shadow: none; }
-        .btn-success { background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 15px rgba(16,185,129,0.4); }
-        
-        /* جدول البيانات */
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #0d1322; border-radius: 8px; overflow: hidden; }
-        th, td { padding: 12px; text-align: center; border-bottom: 1px solid var(--border-color); font-size: 14px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+        input, select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #374151; background: #0d1322; color: #fff; box-sizing: border-box; }
+        .btn-main { background: #2563eb; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; margin-top: 10px; transition: 0.3s; }
+        .btn-main:hover { background: #1d4ed8; }
+        .btn-danger { background: #dc2626; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #0d1322; border-radius: 6px; overflow: hidden; }
+        th, td { padding: 10px; text-align: center; border-bottom: 1px solid #1f2937; font-size: 14px; }
         th { background: #1f2937; color: #60a5fa; }
-        img.squad-thumb { width: 45px; height: 45px; object-fit: cover; border-radius: 6px; cursor: pointer; transition: 0.2s; border: 1px solid #3b82f6; }
-        img.squad-thumb:hover { transform: scale(1.15); }
-
-        /* سكشن شاشة القرعة الإقصائية الحماسية */
-        #rouletteBox {
-            display: none;
-            background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);
-            border: 2px dashed #3b82f6;
-            padding: 30px;
-            text-align: center;
-            border-radius: 16px;
-            margin-bottom: 25px;
-        }
-        .roulette-name {
-            font-size: 32px;
-            font-weight: 900;
-            color: #facc15;
-            text-shadow: 0 0 20px rgba(250,204,21,0.6);
-            margin: 15px 0;
-            letter-spacing: 2px;
-        }
-        /* كارد المواجهات النارية */
-        .matchup-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-        .match-card {
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 12px;
-            padding: 15px;
-            position: relative;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-        .match-header { font-size: 12px; color: #94a3b8; margin-bottom: 8px; font-weight: bold; text-transform: uppercase; }
-        .vs-container { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-        .player-box { flex: 1; background: #1e293b; padding: 10px; border-radius: 8px; text-align: center; }
-        .player-box b { color: #60a5fa; display: block; font-size: 15px; margin-bottom: 4px; }
-        .vs-badge { background: #ef4444; color: white; padding: 6px 10px; border-radius: 50%; font-weight: 900; font-size: 12px; }
+        img.squad-thumb { width: 45px; height: 45px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid #3b82f6; }
+        img.squad-thumb:hover { transform: scale(1.1); }
     </style>
 </head>
 <body>
 
-<div class="container" id="adminPanel" style="display: none;">
-    <h2>⚡ لوحة التحكم وعمليات القرعة الإسبورتس</h2>
+<div class="container" id="panel" style="display: none;">
+    <h2>🎮 لوحة تحكم المنظم والبطولات</h2>
 
-    <!-- إنشاء بطولة جديدة -->
+    <!-- قسم إنشاء البطولة -->
     <div class="card">
-        <h3>إنشاء وإطلاق بطولة جديدة</h3>
-        <form id="tournamentForm">
+        <h3>إنشاء بطولة جديدة</h3>
+        <form id="createTourForm">
             <div class="form-group">
                 <label>اسم البطولة:</label>
-                <input type="text" id="tourName" required placeholder="مثال: كأس الملك - الموسم الثالث">
+                <input type="text" id="tTitle" required placeholder="مثال: بطولة الموسم الأول لـ PUBG">
             </div>
             <div class="form-group">
                 <label>اسم اللعبة:</label>
-                <input type="text" id="gameName" required placeholder="PUBG Mobile / eFootball">
+                <input type="text" id="tGame" required placeholder="PUBG Mobile / eFootball">
             </div>
             <div class="form-group">
-                <label>الحد الأقصى للبطولة (عدد اللاعبين):</label>
-                <input type="number" id="maxPlayers" value="16" required>
+                <label>الحد الأقصى لعدد اللاعبين:</label>
+                <input type="number" id="tMax" value="16" required>
             </div>
-            <button type="submit">إطلاق البطولة رسمياً 🚀</button>
+            <button type="submit" class="btn-main">🚀 إطلاق البطولة الآن</button>
         </form>
     </div>
 
-    <!-- إدارة البطولات الحالية -->
+    <!-- البطولات الحالية -->
     <div class="card">
         <h3>البطولات المسجلة</h3>
-        <div id="tournamentsList">جاري التحميل...</div>
+        <div id="tList">جاري التحميل...</div>
     </div>
 
-    <!-- زر تشغيل القرعة الإقصائية العشوائية الحماسية -->
-    <div class="card" style="text-align: center; background: linear-gradient(135deg, #1e1b4b, #111827);">
-        <h3>🎲 نظام القرعة والتدوير العشوائي للمواجهات</h3>
-        <p style="color: #9ca3af; font-size: 14px; margin-bottom: 20px;">قم باختيار بطولة واضغط لبدء القرعة الإقصائية العشوائية بالأنيميشن الحماسي!</p>
-        <div class="form-group" style="max-width: 400px; margin: 0 auto 15px auto;">
-            <select id="drawTournamentSelect">
-                <option value="">اختر البطولة لإجراء القرعة...</option>
-            </select>
+    <!-- قسم القرعة العشوائية الحماسية -->
+    <div class="card" style="background: #1e1b4b; text-align: center;">
+        <h3>🎲 نظام القرعة العشوائية للمواجهات</h3>
+        <div class="form-group" style="max-width: 400px; margin: 10px auto;">
+            <select id="drawSelect"><option value="">اختر البطولة لإجراء القرعة...</option></select>
         </div>
-        <button class="btn-success" onclick="startEpicDraw()" style="max-width: 400px; margin: auto;">بدء القرعة العشوائية الملحمية 🔥</button>
+        <button onclick="runDraw()" class="btn-main" style="background: #10b981; max-width: 400px; margin: auto;">بدء القرعة عشوائياً 🔥</button>
+        <div id="drawResult" style="margin-top: 15px; text-align: right;"></div>
     </div>
 
-    <!-- شاشة الـ Animation العشوائية (روليت الأسماء) -->
-    <div id="rouletteBox">
-        <h4 style="color: #60a5fa; margin: 0;">جاري خلط وتشابك اللاعبين عشوائياً...</h4>
-        <div class="roulette-name" id="rouletteDisplay">جاري التحميل...</div>
-        <p style="color: #10b981; font-weight: bold; font-size: 14px;" id="rouletteStatus">تحضير جداول المواجهات...</p>
-    </div>
-
-    <!-- نتائج المواجهات والقرعة -->
-    <div class="card" id="bracketResultCard" style="display: none;">
-        <h3>🏆 جدول الأدوار الإقصائية (المواجهات الحية)</h3>
-        <div class="matchup-grid" id="matchupsContainer"></div>
-    </div>
-
-    <!-- إدارة اللاعبين -->
+    <!-- اللاعبون المسجلون -->
     <div class="card">
-        <h3>اللاعبون المسجلون بالبطولات</h3>
+        <h3>اللاعبون المسجلون بالبطولة</h3>
         <div style="overflow-x: auto;">
             <table>
                 <thead>
@@ -141,12 +75,12 @@
                         <th>التليفون</th>
                         <th>الـ ID</th>
                         <th>التشكيلة</th>
-                        <th>الوصية الاستفزازية</th>
+                        <th>الوصية</th>
                         <th>إجراءات</th>
                     </tr>
                 </thead>
-                <tbody id="playersTableBody">
-                    <tr><td colspan="6" style="color:#9ca3af;">لا يوجد لاعبين مسجلين.</td></tr>
+                <tbody id="pBody">
+                    <tr><td colspan="6" style="color: #9ca3af;">لا يوجد لاعبين مسجلين.</td></tr>
                 </tbody>
             </table>
         </div>
@@ -157,190 +91,129 @@
 const SUPABASE_URL = "https://pudnffhwusacrquqcjei.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Sveiq2WcgtBoIa7KMjlK3g_MCFXLVjK";
 
-async function checkAuth() {
-    const { value: password } = await Swal.fire({
-        title: 'دخول لوحة الأدمن',
-        input: 'password',
-        inputPlaceholder: 'كلمة المرور السرية',
-        allowOutsideClick: false,
-        background: '#111827', color: '#f3f4f6'
-    });
-    if (password === "taj2026") {
-        document.getElementById('adminPanel').style.display = 'block';
-        loadTournaments();
+// حماية الباسورد
+async function auth() {
+    const { value: pass } = await Swal.fire({ title: 'كلمة مرور الأدمن', input: 'password', allowOutsideClick: false, background: '#111827', color: '#fff' });
+    if (pass === "taj2026") {
+        document.getElementById('panel').style.display = 'block';
+        loadTours();
         loadPlayers();
-    } else {
-        checkAuth();
-    }
+    } else { auth(); }
 }
 
 // إنشاء بطولة جديدة
-document.getElementById('tournamentForm').addEventListener('submit', async function(e) {
+document.getElementById('createTourForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const title = document.getElementById('tourName').value;
-    const game_name = document.getElementById('gameName').value;
-    const max_players = parseInt(document.getElementById('maxPlayers').value);
+    const title = document.getElementById('tTitle').value;
+    const game_name = document.getElementById('tGame').value;
+    const max_players = parseInt(document.getElementById('tMax').value);
 
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ title, game_name, max_players, status: 'open' })
-    });
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'apikey': SUPABASE_ANON_KEY, 
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({ 
+                title: title, 
+                game_name: game_name, 
+                max_players: max_players, 
+                status: 'open' 
+            })
+        });
 
-    if (res.ok) {
-        Swal.fire('نجاح عظيم!', 'تم إطلاق البطولة بنجاح وجاهزة لاستقبال الأبطال!', 'success');
-        document.getElementById('tournamentForm').reset();
-        loadTournaments();
+        if (res.ok) {
+            Swal.fire('نجاح', 'تم إطلاق البطولة بنجاح!', 'success');
+            document.getElementById('createTourForm').reset();
+            loadTours();
+        } else {
+            const errData = await res.json();
+            console.error("Supabase Error:", errData);
+            Swal.fire('خطأ', `فشل إنشاء البطولة: ${errData.message || 'خطأ غير معروف'}`, 'error');
+        }
+    } catch (err) {
+        console.error("Network Error:", err);
+        Swal.fire('خطأ', 'حدث خطأ في الاتصال بالشبكة.', 'error');
     }
 });
 
 // تحميل البطولات
-async function loadTournaments() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?select=*`, {
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+async function loadTours() {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?select=*`, { 
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
     });
-    const tours = await res.json();
+    const data = await res.json();
     
-    // قائمة عرض البطولات
-    document.getElementById('tournamentsList').innerHTML = tours.map(t => `
-        <div style="background:#0d1322; padding:12px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; border: 1px solid #1f2937;">
-            <span><b>${t.title}</b> (${t.game_name}) - السعة: ${t.max_players}</span>
-            <span style="color:#10b981; font-weight:bold;">الحالة: ${t.status}</span>
-        </div>
-    `).join('');
-
-    // قائمة اختيار البطولة للقرعة
-    const select = document.getElementById('drawTournamentSelect');
-    select.innerHTML = '<option value="">-- اختر البطولة لإجراء القرعة --</option>' + tours.map(t => `<option value="${t.id}">${t.title}</option>`).join('');
+    if(Array.isArray(data)) {
+        document.getElementById('tList').innerHTML = data.map(t => `<div style="background:#0d1322; padding:10px; margin-bottom:5px; border-radius:6px; display:flex; justify-content:space-between;"><span><b>${t.title}</b> (${t.game_name}) - السعة: ${t.max_players}</span><span style="color:#10b981; font-weight:bold;">${t.status}</span></div>`).join('');
+        document.getElementById('drawSelect').innerHTML = '<option value="">اختر البطولة للقرعة...</option>' + data.map(t => `<option value="${t.id}">${t.title}</option>`).join('');
+    }
 }
 
 // تحميل اللاعبين
 async function loadPlayers() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/players?select=*`, {
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/players?select=*`, { 
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
     });
     const players = await res.json();
-    const tbody = document.getElementById('playersTableBody');
-    if(!players.length) { tbody.innerHTML = `<tr><td colspan="6" style="color:#9ca3af;">لا يوجد لاعبين مسجلين حتى الآن.</td></tr>`; return; }
+    const tbody = document.getElementById('pBody');
+    if (!players || !players.length) { tbody.innerHTML = `<tr><td colspan="6" style="color: #9ca3af;">لا يوجد لاعبين.</td></tr>`; return; }
 
     tbody.innerHTML = players.map(p => `
         <tr>
             <td><b>${p.name}</b></td>
             <td>${p.phone}</td>
             <td><code>${p.game_id}</code></td>
-            <td><img src="${p.squad_image_url}" class="squad-thumb" onclick="window.open('${p.squad_image_url}', '_blank')" title="عرض تشكيلة اللاعب"></td>
-            <td style="color: #facc15; font-style: italic;">"${p.tawseya || 'لا توجد وصية'}"</td>
-            <td><button class="btn-danger" onclick="deletePlayer(${p.id})">حذف</button></td>
+            <td><img src="${p.squad_image_url}" class="squad-thumb" onclick="window.open('${p.squad_image_url}', '_blank')"></td>
+            <td style="color:#facc15; font-style:italic;">"${p.tawseya || 'بدون'}"</td>
+            <td><button class="btn-danger" onclick="del(${p.id})">حذف</button></td>
         </tr>
     `).join('');
 }
 
-async function deletePlayer(id) {
-    await fetch(`${SUPABASE_URL}/rest/v1/players?id=eq.${id}`, {
-        method: 'DELETE',
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-    });
-    loadPlayers();
+// حذف لاعب
+async function del(id) {
+    const confirm = await Swal.fire({ title: 'حذف اللاعب؟', icon: 'warning', showCancelButton: true, confirmButtonText: 'نعم', cancelButtonText: 'إلغاء', background: '#111827', color: '#fff' });
+    if(confirm.isConfirmed) {
+        await fetch(`${SUPABASE_URL}/rest/v1/players?id=eq.${id}`, { 
+            method: 'DELETE', 
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
+        });
+        loadPlayers();
+    }
 }
 
-// 🎰 خوارزمية القرعة العشوائية الحماسية (الأنيميشن والتدوير)
-async function startEpicDraw() {
-    const tournamentId = document.getElementById('drawTournamentSelect').value;
-    if(!tournamentId) {
-        Swal.fire('تنبيه', 'يجب اختيار البطولة أولاً لإجراء القرعة!', 'warning');
-        return;
-    }
+// قرعة عشوائية للمواجهات
+async function runDraw() {
+    const tId = document.getElementById('drawSelect').value;
+    if(!tId) { Swal.fire('تنبيه', 'اختر البطولة أولاً', 'warning'); return; }
 
-    // جلب لاعبي البطولة المحددة فقط
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/players?tournament_id=eq.${tournamentId}&select=*`, {
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/players?tournament_id=eq.${tId}&select=*`, { 
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
     });
     const players = await res.json();
+    if(!players || players.length < 2) { Swal.fire('تنبيه', 'اللاعبين المسجلين أقل من لاعبين اثنين!', 'warning'); return; }
 
-    if(players.length < 2) {
-        Swal.fire('عذراً!', 'عدد اللاعبين المسجلين في هذه البطولة أقل من لاعبين اثنين، لا يمكن إجراء قرعة.', 'error');
-        return;
-    }
-
-    // إظهار شاشة الروليت الحماسية
-    const rouletteBox = document.getElementById('rouletteBox');
-    const rouletteDisplay = document.getElementById('rouletteDisplay');
-    const bracketCard = document.getElementById('bracketResultCard');
+    let arr = [...players].sort(() => Math.random() - 0.5);
+    let html = '<h4 style="color:#60a5fa; margin-bottom:10px;">نتائج المواجهات الإقصائية:</h4>';
     
-    rouletteBox.style.display = 'block';
-    bracketCard.style.display = 'none';
-
-    // خلط اللاعبين عشوائياً (Fisher-Yates Shuffle Algorithm)
-    let shuffled = [...players];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-
-    // تأثير الـ Slot Machine / Animation السريع
-    let counter = 0;
-    const interval = setInterval(() => {
-        const randomPlayer1 = players[Math.floor(Math.random() * players.length)].name;
-        const randomPlayer2 = players[Math.floor(Math.random() * players.length)].name;
-        rouletteDisplay.innerHTML = `${randomPlayer1} ⚔️ ${randomPlayer2}`;
-        counter++;
-        
-        if (counter > 25) { // بعد 2.5 ثانية يقف الأنيميشن ويعرض القرعة الحقيقية
-            clearInterval(interval);
-            rouletteBox.style.display = 'none';
-            renderBracket(shuffled);
-        }
-    }, 100);
-}
-
-// عرض نتائج جدول المواجهات الثنائية
-function renderBracket(shuffledPlayers) {
-    const container = document.getElementById('matchupsContainer');
-    container.innerHTML = '';
-    
-    let matchNumber = 1;
-    for (let i = 0; i < shuffledPlayers.length; i += 2) {
-        const p1 = shuffledPlayers[i];
-        const p2 = shuffledPlayers[i+1];
-
-        if (p2) {
-            // مواجهة طبيعية بين لاعبين
-            container.innerHTML += `
-                <div class="match-card">
-                    <div class="match-header">مواجهة رقم #${matchNumber} (دور الـ ${shuffledPlayers.length})</div>
-                    <div class="vs-container">
-                        <div class="player-box">
-                            <b>${p1.name}</b>
-                            <span style="font-size:11px; color:#94a3b8;">ID: ${p1.game_id}</span>
-                        </div>
-                        <div class="vs-badge">VS</div>
-                        <div class="player-box">
-                            <b>${p2.name}</b>
-                            <span style="font-size:11px; color:#94a3b8;">ID: ${p2.game_id}</span>
-                        </div>
-                    </div>
-                </div>
-            `;
+    let matchNum = 1;
+    for(let i=0; i<arr.length; i+=2) {
+        if(arr[i+1]) {
+            html += `<div style="background:#0d1322; padding:8px 12px; margin-bottom:6px; border-radius:6px; border-right:3px solid #ef4444;">⚔️ مواجهة #${matchNum}: <b>${arr.at(i).name}</b> ضد <b>${arr.at(i+1).name}</b></div>`;
         } else {
-            // لاعب صعد تلقائياً لعدم تكافؤ العدد (Bye)
-            container.innerHTML += `
-                <div class="match-card" style="border-color: #10b981;">
-                    <div class="match-header" style="color: #10b981;">تأهل مباشر (Bye)</div>
-                    <div style="text-align: center; padding: 10px;">
-                        <b style="color: #60a5fa; font-size: 16px;">${p1.name}</b>
-                        <p style="font-size: 12px; color: #9ca3af; margin: 5px 0 0 0;">صعد للدور التالي تلقائياً لعدم وجود منافس في هذه الجولة.</p>
-                    </div>
-                </div>
-            `;
+            html += `<div style="background:#0d1322; padding:8px 12px; margin-bottom:6px; border-radius:6px; border-right:3px solid #10b981; color:#10b981;">✨ تأهل مباشر (Bye): <b>${arr.at(i).name}</b></div>`;
         }
-        matchNumber++;
+        matchNum++;
     }
-
-    document.getElementById('bracketResultCard').style.display = 'block';
-    Swal.fire('تمت القرعة بنجاح! 🔥', 'تم توليد مواجهات البطولة الإقصائية عشوائياً وبثها مباشرة.', 'success');
+    document.getElementById('drawResult').innerHTML = html;
+    Swal.fire('تمت القرعة بنجاح! 🔥', 'تم توليد المواجهات العشوائية.', 'success');
 }
 
-checkAuth();
+auth();
 </script>
 </body>
 </html>
