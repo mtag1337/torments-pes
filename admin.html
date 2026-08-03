@@ -85,6 +85,7 @@
                 <thead>
                     <tr>
                         <th>الاسم</th>
+                        <th>البطولة المشارك بها</th>
                         <th>التليفون</th>
                         <th>الـ ID</th>
                         <th>التشكيلة</th>
@@ -93,7 +94,7 @@
                     </tr>
                 </thead>
                 <tbody id="pBody">
-                    <tr><td colspan="6" style="color: #9ca3af;">لا يوجد لاعبين مسجلين.</td></tr>
+                    <tr><td colspan="7" style="color: #9ca3af;">لا يوجد لاعبين مسجلين.</td></tr>
                 </tbody>
             </table>
         </div>
@@ -104,13 +105,15 @@
 const SUPABASE_URL = "https://pudnffhwusacrquqcjei.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Sveiq2WcgtBoIa7KMjlK3g_MCFXLVjK";
 
+let globalTournaments = []; // مصفوفة لتخزين البطولات المتاحة للربط مع اللاعبين
+
 // حماية الباسورد
 async function auth() {
     const { value: pass } = await Swal.fire({ title: 'كلمة مرور الأدمن', input: 'password', allowOutsideClick: false, background: '#111827', color: '#fff' });
     if (pass === "taj2026") {
         document.getElementById('panel').style.display = 'block';
-        loadTours();
-        loadPlayers();
+        await loadTours();
+        await loadPlayers();
     } else { auth(); }
 }
 
@@ -174,10 +177,10 @@ async function loadTours() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?select=*`, { 
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
     });
-    const data = await res.json();
+    globalTournaments = await res.json();
     
-    if(Array.isArray(data)) {
-        document.getElementById('tList').innerHTML = data.map(t => `
+    if(Array.isArray(globalTournaments)) {
+        document.getElementById('tList').innerHTML = globalTournaments.map(t => `
             <div class="tour-item">
                 <span>
                     <b>${t.title}</b> (${t.game_name}) - السعة: ${t.max_players} | 
@@ -191,7 +194,7 @@ async function loadTours() {
                 </div>
             </div>
         `).join('');
-        document.getElementById('drawSelect').innerHTML = '<option value="">اختر البطولة للقرعة...</option>' + data.map(t => `<option value="${t.id}">${t.title}</option>`).join('');
+        document.getElementById('drawSelect').innerHTML = '<option value="">اختر البطولة للقرعة...</option>' + globalTournaments.map(t => `<option value="${t.id}">${t.title}</option>`).join('');
     }
 }
 
@@ -257,6 +260,7 @@ async function openEditTournamentModal(id, currentTitle, currentGame, currentMax
             if (res.ok) {
                 Swal.fire('تم التعديل!', 'تم تحديث بيانات البطولة بنجاح.', 'success');
                 loadTours();
+                loadPlayers();
             } else {
                 throw new Error('فشل تحديث البطولة');
             }
@@ -287,38 +291,46 @@ async function deleteTournament(tId) {
         if(res.ok) {
             Swal.fire('تم الحذف', 'تم حذف البطولة بنجاح.', 'success');
             loadTours();
+            loadPlayers();
         } else {
             Swal.fire('خطأ', 'فشل حذف البطولة.', 'error');
         }
     }
 }
 
-// تحميل اللاعبين
+// تحميل اللاعبين مع ربطهم بالبطولة الخاصة بهم
 async function loadPlayers() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/players?select=*`, { 
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
     });
     const players = await res.json();
     const tbody = document.getElementById('pBody');
-    if (!players || !players.length) { tbody.innerHTML = `<tr><td colspan="6" style="color: #9ca3af;">لا يوجد لاعبين.</td></tr>`; return; }
+    if (!players || !players.length) { tbody.innerHTML = `<tr><td colspan="7" style="color: #9ca3af;">لا يوجد لاعبين.</td></tr>`; return; }
 
-    tbody.innerHTML = players.map(p => `
-        <tr>
-            <td><b>${p.name}</b></td>
-            <td>${p.phone}</td>
-            <td><code>${p.game_id}</code></td>
-            <td><img src="${p.squad_image_url}" class="squad-thumb" onclick="window.open('${p.squad_image_url}', '_blank')"></td>
-            <td style="color:#facc15; font-style:italic;">"${p.tawseya || 'بدون'}"</td>
-            <td>
-                <button class="btn-edit" onclick="openEditPlayerModal(${p.id}, '${p.name}', '${p.phone}', '${p.game_id}', '${p.tawseya || ''}')">تعديل ✏️</button>
-                <button class="btn-danger" onclick="del(${p.id})">حذف 🗑️</button>
-            </td>
-        </tr>
-    `).join('');
+    tbody.innerHTML = players.map(p => {
+        const tourObj = globalTournaments.find(t => t.id === p.tournament_id);
+        const tourName = tourObj ? tourObj.title : '<span style="color:#ef4444;">غير محددة</span>';
+        return `
+            <tr>
+                <td><b>${p.name}</b></td>
+                <td style="color:#60a5fa;">${tourName}</td>
+                <td>${p.phone}</td>
+                <td><code>${p.game_id}</code></td>
+                <td><img src="${p.squad_image_url}" class="squad-thumb" onclick="window.open('${p.squad_image_url}', '_blank')"></td>
+                <td style="color:#facc15; font-style:italic;">"${p.tawseya || 'بدون'}"</td>
+                <td>
+                    <button class="btn-edit" onclick="openEditPlayerModal(${p.id}, '${p.name}', '${p.phone}', '${p.game_id}', '${p.tawseya || ''}', ${p.tournament_id || 'null'})">تعديل ✏️</button>
+                    <button class="btn-danger" onclick="del(${p.id})">حذف 🗑️</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
-// نافذة تعديل بيانات اللاعب
-async function openEditPlayerModal(id, currentName, currentPhone, currentGameId, currentTawseya) {
+// نافذة تعديل بيانات اللاعب مع إمكانية تغيير وتحديد البطولة المشارك بها
+async function openEditPlayerModal(id, currentName, currentPhone, currentGameId, currentTawseya, currentTourId) {
+    let tourOptionsHtml = globalTournaments.map(t => `<option value="${t.id}" ${t.id === currentTourId ? 'selected' : ''}>${t.title}</option>`).join('');
+
     const { value: formValues } = await Swal.fire({
         title: 'تعديل بيانات اللاعب',
         background: '#111827',
@@ -327,6 +339,13 @@ async function openEditPlayerModal(id, currentName, currentPhone, currentGameId,
             <div style="text-align: right; margin-bottom: 10px;">
                 <label style="display:block; margin-bottom:5px; font-weight:bold;">اسم اللاعب:</label>
                 <input id="swal-input-name" class="swal2-input" value="${currentName}" style="width:90%; margin:0; background:#0d1322; color:#fff; border:1px solid #374151;">
+            </div>
+            <div style="text-align: right; margin-bottom: 10px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">البطولة المشارك بها:</label>
+                <select id="swal-input-tour" class="swal2-input" style="width:90%; margin:0; background:#0d1322; color:#fff; border:1px solid #374151;">
+                    <option value="">اختر البطولة</option>
+                    ${tourOptionsHtml}
+                </select>
             </div>
             <div style="text-align: right; margin-bottom: 10px;">
                 <label style="display:block; margin-bottom:5px; font-weight:bold;">رقم التليفون:</label>
@@ -348,6 +367,7 @@ async function openEditPlayerModal(id, currentName, currentPhone, currentGameId,
         preConfirm: () => {
             return {
                 name: document.getElementById('swal-input-name').value,
+                tournament_id: parseInt(document.getElementById('swal-input-tour').value) || null,
                 phone: document.getElementById('swal-input-phone').value,
                 game_id: document.getElementById('swal-input-gameid').value,
                 tawseya: document.getElementById('swal-input-tawseya').value
@@ -400,7 +420,7 @@ async function runAndSaveDraw() {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
     });
     const players = await res.json();
-    if(!players || players.length < 2) { Swal.fire('تنبيه', 'اللاعبين المسجلين أقل من لاعبين اثنين!', 'warning'); return; }
+    if(!players || players.length < 2) { Swal.fire('تنبيه', 'لا يوجد عدد كافٍ من اللاعبين المسجلين في هذه البطولة بالتحديد!', 'warning'); return; }
 
     // خلط اللاعبين عشوائياً
     let arr = [...players].sort(() => Math.random() - 0.5);
@@ -431,7 +451,6 @@ async function runAndSaveDraw() {
             });
         } else {
             html += `<div style="background:#0d1322; padding:8px 12px; margin-bottom:6px; border-radius:6px; border-right:3px solid #10b981; color:#10b981;">✨ تأهل مباشر (Bye): <b>${player1.name}</b></div>`;
-            // في حالة التأهل الفردي المباشر، يمكنك اعتباره فائزاً مباشراً أو حفظه كمواجهة طرفها الثاني فارغ
             matchesToInsert.push({
                 tournament_id: parseInt(tId),
                 round_name: 'دور الـ ' + arr.length,
