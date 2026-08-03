@@ -3,78 +3,228 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة تحكم الأدمن - البطولة</title>
+    <title>لوحة تحكم المنظمين - إدارة البطولة</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        body { font-family: Tahoma, sans-serif; background: #0f172a; color: #fff; padding: 20px; margin: 0; }
-        .container { max-width: 800px; margin: auto; background: #1e293b; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        h2 { text-align: center; color: #38bdf8; }
-        .btn-random { background: #f59e0b; color: #000; padding: 12px 20px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 20px; }
-        .btn-random:hover { background: #d97706; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #0f172a; border-radius: 8px; overflow: hidden; }
-        th, td { padding: 12px; text-align: center; border-bottom: 1px solid #334155; }
-        th { background: #334155; color: #38bdf8; }
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #111827;
+            --accent-color: #3b82f6;
+            --danger-color: #ef4444;
+            --success-color: #10b981;
+            --text-main: #f3f4f6;
+            --border-color: #1f2937;
+        }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg-color); color: var(--text-main); padding: 20px; margin: 0; }
+        .container { max-width: 1000px; margin: auto; }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--border-color); margin-bottom: 25px; }
+        h2, h3 { color: #60a5fa; text-align: center; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; }
+        input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #0d1322; color: var(--text-main); box-sizing: border-box; }
+        button { background: var(--accent-color); color: white; padding: 12px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.3s; }
+        button:hover { opacity: 0.9; }
+        .btn-danger { background: var(--danger-color); padding: 6px 12px; font-size: 13px; width: auto; }
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #0d1322; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px; text-align: center; border-bottom: 1px solid var(--border-color); font-size: 14px; }
+        th { background: #1f2937; color: #60a5fa; }
+        img.squad-thumb { width: 45px; height: 45px; object-fit: cover; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        img.squad-thumb:hover { transform: scale(1.1); }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>لوحة تحكم المنظم (الأدمن)</h2>
-    
-    <button class="btn-random" onclick="generateBracket()">⚡ بدء القرعة العشوائية للبطولة</button>
+<div class="container" id="adminPanel" style="display: none;">
+    <h2>🔒 لوحة تحكم المنظمين المركزية</h2>
 
-    <h3>قائمة اللاعبين المسجلين:</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>الاسم</th>
-                <th>رقم التليفون</th>
-                <th>الـ ID</th>
-                <th>الوصية / التحدي</th>
-            </tr>
-        </thead>
-        <tbody id="playersTableBody">
-            <!-- هينزل هنا اللاعبين أوتوماتيك -->
-        </tbody>
-    </table>
+    <!-- قسم إنشاء بطولة جديدة -->
+    <div class="card">
+        <h3>إنشاء بطولة جديدة</h3>
+        <form id="tournamentForm">
+            <div class="form-group">
+                <label>اسم البطولة:</label>
+                <input type="text" id="tourName" required placeholder="مثال: بطولة الموسم الأول لـ PUBG">
+            </div>
+            <div class="form-group">
+                <label>لعبة البطولة:</label>
+                <input type="text" id="gameName" required placeholder="مثال: PUBG Mobile / eFootball">
+            </div>
+            <button type="submit">إنشاء وإطلاق البطولة</button>
+        </form>
+    </div>
+
+    <!-- قسم البطولات الحالية -->
+    <div class="card">
+        <h3>البطولات المسجلة</h3>
+        <div id="tournamentsList">جاري تحميل البطولات...</div>
+    </div>
+
+    <!-- جدول إدارة اللاعبين -->
+    <div class="card">
+        <h3>إدارة اللاعبين المسجلين</h3>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>الاسم</th>
+                        <th>التليفون</th>
+                        <th>الـ ID</th>
+                        <th>التشكيلة</th>
+                        <th>الوصية</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="playersTableBody">
+                    <tr><td colspan="6" style="color: #9ca3af;">جاري تحميل اللاعبين...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <script>
 const SUPABASE_URL = "https://pudnffhwusacrquqcjei.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Sveiq2WcgtBoIa7KMjlK3g_MCFXLVjK";
 
-// دالة لجلب وعرض اللاعبين في جدول الأدمن
-async function loadPlayers() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/players?select=*`, {
+// حماية الأدمن بباسورد
+async function checkAuth() {
+    const { value: password } = await Swal.fire({
+        title: 'دخول لوحة التحكم',
+        input: 'password',
+        inputPlaceholder: 'كلمة المرور السرية',
+        confirmButtonText: 'دخول',
+        allowOutsideClick: false,
+        background: '#111827',
+        color: '#f3f4f6'
+    });
+
+    if (password === "taj2026") {
+        document.getElementById('adminPanel').style.display = 'block';
+        loadTournaments();
+        loadPlayers();
+    } else {
+        Swal.fire({
+            title: 'خطأ!',
+            text: 'كلمة المرور غير صحيحة.',
+            icon: 'error',
+            background: '#111827',
+            color: '#f3f4f6'
+        }).then(() => checkAuth());
+    }
+}
+
+// إنشاء بطولة جديدة
+document.getElementById('tournamentForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const title = document.getElementById('tourName').value;
+    const game_name = document.getElementById('gameName').value;
+
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments`, {
+        method: 'POST',
         headers: {
+            'Content-Type': 'application/json',
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-        }
+        },
+        body: JSON.stringify({ title, game_name, status: 'open' })
     });
-    const players = await res.json();
-    
-    const tbody = document.getElementById('playersTableBody');
-    tbody.innerHTML = '';
 
-    players.forEach(p => {
-        tbody.innerHTML += `
+    if (res.ok) {
+        Swal.fire('نجاح', 'تم إنشاء البطولة بنجاح!', 'success');
+        document.getElementById('tournamentForm').reset();
+        loadTournaments();
+    } else {
+        Swal.fire('خطأ', 'فشل إنشاء البطولة، تأكد من إنشاء جدول tournaments في قاعدة البيانات', 'error');
+    }
+});
+
+// جلب وعرض البطولات
+async function loadTournaments() {
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?select=*`, {
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        const tours = await res.json();
+        const listDiv = document.getElementById('tournamentsList');
+        
+        if(!tours || tours.length === 0) {
+            listDiv.innerHTML = '<p style="color: #9ca3af; text-align: center;">لا توجد بطولات حالياً.</p>';
+            return;
+        }
+
+        listDiv.innerHTML = tours.map(t => `
+            <div style="background:#0d1322; padding:12px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; border: 1px solid #1f2937;">
+                <span><b>${t.title}</b> (${t.game_name})</span>
+                <span style="color:#10b981; font-weight: bold;">الحالة: ${t.status}</span>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+// جلب وعرض اللاعبين مع زر الحذف
+async function loadPlayers() {
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/players?select=*`, {
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        const players = await res.json();
+        const tbody = document.getElementById('playersTableBody');
+        
+        if (!players || players.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="color: #9ca3af;">لا يوجد لاعبين مسجلين حتى الآن.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = players.map(p => `
             <tr>
                 <td>${p.name}</td>
                 <td>${p.phone}</td>
                 <td>${p.game_id}</td>
+                <td>
+                    ${p.squad_image_url ? `<img src="${p.squad_image_url}" class="squad-thumb" onclick="window.open('${p.squad_image_url}', '_blank')" title="اضغط لتكبير الصورة">` : 'بدون'}
+                </td>
                 <td>${p.tawseya || 'بدون'}</td>
+                <td><button class="btn-danger" onclick="deletePlayer(${p.id})">حذف</button></td>
             </tr>
-        `;
+        `).join('');
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+// حذف لاعب
+async function deletePlayer(id) {
+    const confirm = await Swal.fire({
+        title: 'هل أنت متأكد من الحذف؟',
+        text: "لن يمكنك استعادة بيانات هذا اللاعب مرة أخرى!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، احذف',
+        cancelButtonText: 'إلغاء',
+        background: '#111827',
+        color: '#f3f4f6'
     });
+
+    if(confirm.isConfirmed) {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/players?id=eq.${id}`, {
+            method: 'DELETE',
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+
+        if(res.ok) {
+            loadPlayers();
+            Swal.fire({ title: 'تم الحذف', text: 'تم حذف اللاعب بنجاح', icon: 'success', background: '#111827', color: '#f3f4f6' });
+        } else {
+            Swal.fire({ title: 'خطأ', text: 'فشل حذف اللاعب', icon: 'error', background: '#111827', color: '#f3f4f6' });
+        }
+    }
 }
 
-// دالة القرعة العشوائية
-function generateBracket() {
-    alert('تم تنفيذ القرعة العشوائية وتوزيع اللاعبين في الجدول بنجاح! 🔥');
-    // هنا هنربطها بخوارزمية التوزيع العشوائي في الداتا بيز
-}
-
-// تشغيل الدالة أول ما الصفحة تفتح
-loadPlayers();
+// تشغيل نظام الحماية عند فتح الصفحة
+checkAuth();
 </script>
 </body>
 </html>
