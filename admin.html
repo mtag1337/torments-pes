@@ -47,8 +47,8 @@
                 <input type="number" id="tMax" value="16" required>
             </div>
             <div class="form-group">
-                <label>رابط بث اليوتيوب (يقبل الرابط العادي أو الـ Embed):</label>
-                <input type="text" id="tStream" placeholder="https://www.youtube.com/watch?v=xxxxxx">
+                <label>رابط بث اليوتيوب (عادي أو مباشر Live أو Embed):</label>
+                <input type="text" id="tStream" placeholder="https://www.youtube.com/watch?v=xxxxxx أو رابط البث المباشر">
             </div>
             <button type="submit" class="btn-main">🚀 إطلاق البطولة الآن</button>
         </form>
@@ -107,17 +107,35 @@ async function auth() {
     } else { auth(); }
 }
 
-// دالة ذكية لتحويل رابط يوتيوب العادي إلى صيغة الـ Embed تلقائياً
+// دالة ذكية لتحويل كافة أشكال روابط يوتيوب إلى صيغة الـ Embed المظبوطة
 function formatYoutubeUrl(url) {
     if (!url) return '';
     url = url.trim();
-    if (url.includes('/embed/')) return url;
     
     let videoId = '';
-    if (url.includes('youtu.be/')) {
+    
+    // لو الرابط يتبع روابط البث المباشر /live/
+    if (url.includes('/live/')) {
+        videoId = url.split('/live/')[1].split('?')[0];
+    } 
+    // لو الرابط العادي watch?v=
+    else if (url.includes('watch?v=')) {
+        videoId = url.split('watch?v=')[1];
+        if (videoId.includes('&')) {
+            videoId = videoId.split('&')[0];
+        }
+    } 
+    // لو الرابط المختصر youtu.be/
+    else if (url.includes('youtu.be/')) {
         videoId = url.split('youtu.be/')[1].split('?')[0];
-    } else if (url.includes('watch?v=')) {
-        videoId = url.split('watch?v=')[1].split('&')[0];
+    } 
+    // لو الرابط بالفعل يحتوي على embed/
+    else if (url.includes('/embed/')) {
+        videoId = url.split('/embed/')[1].split('?')[0];
+    }
+    // لو تم إدخال الـ ID مباشرة
+    else {
+        videoId = url;
     }
     
     if (videoId) {
@@ -126,7 +144,7 @@ function formatYoutubeUrl(url) {
     return url;
 }
 
-// إنشاء بطولة جديدة مع رابط البث المتحول تلقائياً
+// إنشاء بطولة جديدة مع التحويل التلقائي لرابط البث
 document.getElementById('createTourForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const title = document.getElementById('tTitle').value;
