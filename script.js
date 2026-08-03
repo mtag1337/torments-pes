@@ -72,7 +72,7 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
                 game_id, 
                 squad_image_url, 
                 tawseya, 
-                tournament_id: currentTournamentId // ربط اللاعب بالبطولة النشطة هنا
+                tournament_id: currentTournamentId 
             })
         });
 
@@ -108,7 +108,7 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
     }
 });
 
-// 2. ميزة الانتقال للمرحلة التالية بذكاء كامل وتصفية نهائية تمنع تكرار اللاعب أو لعبه مع نفسه
+// 2. ميزة الانتقال للمرحلة التالية (جلب أحدث جولة فقط + منع تكرار المباريات + احتفالية النهائي الكبير)
 async function advanceToNextRound() {
     try {
         // أ. جلب أحدث بطولة نشطة تلقائياً
@@ -122,27 +122,33 @@ async function advanceToNextRound() {
         }
         const tourId = tournaments[0].id;
 
-        // ب. جلب مواجهات البطولة الحالية
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/matches?tournament_id=eq.${tourId}&select=*`, {
+        // ب. جلب كل مواجهات البطولة لمعرفة أحدث جولة تم لعبها فقط
+        const allMatchesRes = await fetch(`${SUPABASE_URL}/rest/v1/matches?tournament_id=eq.${tourId}&select=*`, {
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
         });
-        const matches = await res.json();
+        const allMatches = await allMatchesRes.json();
 
-        if (!matches || matches.length === 0) {
+        if (!allMatches || allMatches.length === 0) {
             Swal.fire('تنبيه', 'لا توجد مواجهات مسجلة للبطولة الحالية.', 'warning');
             return;
         }
 
-        // ج. التأكد من انتهاء جميع المباريات الحالية وتحديد فائزين لها
-        const uncompleted = matches.filter(m => m.status !== 'completed' && m.player2_id !== null);
+        // تحديد اسم أآخر جولة تم لعبها حالياً
+        const latestRoundName = allMatches[allMatches.length - 1].round_name;
+
+        // تصفية المباريات لأخذ مباريات الجولة الأخيرة فقط لمنع تكرار المباريات القديمة
+        const currentRoundMatches = allMatches.filter(m => m.round_name === latestRoundName);
+
+        // ج. التأكد من انتهاء جميع مباريات الجولة الحالية وتحديد فائزين لها
+        const uncompleted = currentRoundMatches.filter(m => m.status !== 'completed' && m.player2_id !== null);
         if (uncompleted.length > 0) {
-            Swal.fire('تنبيه', 'لا يمكن الانتقال للمرحلة التالية حتى يتم تحديد الفائزين في جميع المواجهات الحالية!', 'error');
+            Swal.fire('تنبيه', 'لا يمكن الانتقال للمرحلة التالية حتى يتم تحديد الفائزين في جميع مواجهات الجولة الحالية!', 'error');
             return;
         }
 
-        // د. تجميع IDs الفائزين بدقة تامة وتصفيتهم باستخدام Set لمنع أي تكرار نهائياً
+        // د. تجميع IDs فائزين الجولة الأخيرة فقط بدقة وتصفيتهم باستخدام Set
         let rawWinnersIds = [];
-        matches.forEach(m => {
+        currentRoundMatches.forEach(m => {
             if (m.winner_id) {
                 rawWinnersIds.push(m.winner_id);
             }
@@ -150,7 +156,7 @@ async function advanceToNextRound() {
 
         let winnersIds = [...new Set(rawWinnersIds)];
 
-        // هـ. لو لم يتبق سوى لاعب واحد، فهذا هو بطل البطولة النهائي!
+        // هـ. لو لم يتبق سوى لاعب واحد، فهذا هو بطل البطولة النهائي (احتفالية كبرى أسطورية)
         if (winnersIds.length === 1) {
             const champRes = await fetch(`${SUPABASE_URL}/rest/v1/players?id=eq.${winnersIds[0]}&select=name`, {
                 headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
@@ -159,11 +165,18 @@ async function advanceToNextRound() {
             const champName = (champData && champData.length > 0) ? champData[0].name : 'اللاعب الفائز';
 
             Swal.fire({
-                title: '🏆 انتهت البطولة بنجاح وتم تتويج البطل!',
-                html: `لقد حسمت المعركة الكبرى وتوج بطلاً للبطولة:<br><h2 style="color: #facc15; margin-top: 15px; font-size: 26px;">👑 ${champName} 👑</h2>`,
+                title: '🏆 نهائي أسطوري وتتويج بطل البطولة!',
+                html: `
+                    <div style="padding: 10px;">
+                        <p style="color: #9ca3af; font-size: 15px; margin-bottom: 10px;">لقد حسمت المعركة النهائية وأسدل الستار على البطولة بنجاح تام!</p>
+                        <h2 style="color: #facc15; margin-top: 15px; font-size: 30px; text-shadow: 0 0 15px rgba(250,204,21,0.5);">👑 ${champName} 👑</h2>
+                        <p style="color: #34d399; margin-top: 15px; font-weight: bold;">بطل البطولة بلا منازع! 🔥</p>
+                    </div>
+                `,
                 icon: 'success',
                 background: '#111827',
-                color: '#fff'
+                color: '#fff',
+                confirmButtonText: 'مبروك للبطل 🚀'
             });
             return;
         }
@@ -173,7 +186,7 @@ async function advanceToNextRound() {
             return;
         }
 
-        // و. الذكاء البرمجي لتسمية الجولة بدقة تامة بناءً على عدد اللاعبين الفعليين المتأهلين
+        // و. الذكاء البرمجي لاقتراح اسم الجولة بدقة (لو بقوا 2 سيقترح النهائي الكبير فوراً)
         let defaultRoundName = '';
         if (winnersIds.length === 2) {
             defaultRoundName = 'النهائي الكبير 🏆';
@@ -185,16 +198,16 @@ async function advanceToNextRound() {
             defaultRoundName = `دور الـ ${winnersIds.length}`;
         }
 
-        // ز. نافذة منبثقة تفاعلية لتأكيد أو تعديل اسم الجولة
+        // ز. نافذة منبثقة تفاعلية لتعديل أو ترك اسم الجولة
         const { value: customRoundName } = await Swal.fire({
             title: '⚡ الانتقال للمرحلة التالية',
             background: '#111827',
             color: '#fff',
             html: `
                 <div style="text-align: right; margin-bottom: 10px;">
-                    <p style="color: #9ca3af; font-size: 13px; margin-bottom: 8px;">عدد المتأهلين الحقيقيين هو <b>(${winnersIds.length} لاعبين)</b> وتمت تصفيتهم بدقة.</p>
+                    <p style="color: #9ca3af; font-size: 13px; margin-bottom: 8px;">عدد المتأهلين الحقيقيين هو <b>(${winnersIds.length} لاعبين)</b>.</p>
                     <label style="display:block; margin-bottom:5px; font-weight:bold;">اسم الجملة أو المرحلة التي ستظهر للجمهور:</label>
-                    <input id="swal-round-input" class="swal2-input" value="${defaultRoundName}" style="width:90%; margin:0; background:#0d1322; color:#fff; border:1px solid #374151; text-align: center; font-weight: bold; color: #60a5fa;">
+                    <input id="swal-round-input" class="swal2-input" value="${defaultRoundName}" placeholder="اكتب اسم المرحلة هنا..." style="width:90%; margin:0; background:#0d1322; color:#fff; border:1px solid #374151; text-align: center; font-weight: bold; color: #60a5fa;">
                 </div>
             `,
             focusConfirm: false,
@@ -202,13 +215,14 @@ async function advanceToNextRound() {
             confirmButtonText: 'توزيع المباريات وإطلاق الجولة 🚀',
             cancelButtonText: 'إلغاء',
             preConfirm: () => {
-                return document.getElementById('swal-round-input').value || defaultRoundName;
+                const inputVal = document.getElementById('swal-round-input').value.trim();
+                return inputVal !== "" ? inputVal : defaultRoundName;
             }
         });
 
         if (!customRoundName) return;
 
-        // ح. خلط عشوائي آمن (Shuffling) مع حماية ضد لعب اللاعب مع نفسه
+        // ح. خلط عشوائي آمن (Shuffling) مع حماية تامة ضد لعب اللاعب مع نفسه
         let shuffledWinners = [...winnersIds].sort(() => Math.random() - 0.5);
         let nextRoundMatches = [];
 
@@ -216,7 +230,6 @@ async function advanceToNextRound() {
             let player1 = shuffledWinners[i];
             let player2 = shuffledWinners[i+1] || null;
 
-            // حماية إضافية تمنع استحالة أن يكون اللاعب الأول هو نفسه الثاني
             if (player2 && player1 === player2) {
                 player2 = null;
             }
@@ -256,7 +269,7 @@ async function advanceToNextRound() {
         });
 
         if (insertRes.ok) {
-            Swal.fire('تم بنجاح! 🔥', `تمت تصفية اللاعبين وتوزيع المباريات لـ (${customRoundName}) بدون أي أخطاء أو تكرار!`, 'success');
+            Swal.fire('تم بنجاح! 🔥', `تم بدء مباريات (${customRoundName}) بنجاح وبدون أي تكرار للمباريات السابقة!`, 'success');
         } else {
             const err = await insertRes.json();
             Swal.fire('خطأ', 'فشل الانتقال للمرحلة التالية: ' + (err.message || ''), 'error');
