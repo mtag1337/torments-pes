@@ -2,39 +2,95 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale5.0">
-    <title>تسجيل في بطولة الجيمنج</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التسجيل الرسمي في بطولة الجيمنج</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        body { font-family: Tahoma, sans-serif; background: #0f172a; color: #fff; padding: 20px; margin: 0; }
-        .container { max-width: 500px; margin: auto; background: #1e293b; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        h2 { text-align: center; color: #38bdf8; }
-        label { display: block; margin-top: 10px; font-weight: bold; }
-        input, textarea { width: 100%; padding: 10px; margin-top: 5px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; box-sizing: border-box; }
-        button { width: 100%; margin-top: 20px; padding: 12px; background: #22c55e; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        button:hover { background: #16a34a; }
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #111827;
+            --accent-color: #3b82f6;
+            --text-main: #f3f4f6;
+            --border-color: #1f2937;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+        }
+        h2 { text-align: center; color: #60a5fa; margin-bottom: 25px; font-size: 24px; }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+        input, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: #0d1322;
+            color: var(--text-main);
+            font-size: 15px;
+            box-sizing: border-box;
+        }
+        input:focus, textarea:focus { outline: none; border-color: var(--accent-color); }
+        input[type="file"] { padding: 8px; cursor: pointer; }
+        button {
+            width: 100%;
+            margin-top: 10px;
+            padding: 14px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:hover { opacity: 0.9; }
+        .loading { display: none; text-align: center; margin-top: 10px; color: #60a5fa; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>تسجيل في البطولة</h2>
+    <h2>⚡ تسجيل بطولة الجيمنج</h2>
     <form id="registrationForm">
-        <label>اسم اللاعب:</label>
-        <input type="text" id="name" required placeholder="اكتب اسمك الثلاثي">
-
-        <label>رقم التليفون (واتساب):</label>
-        <input type="text" id="phone" required placeholder="01xxxxxxxx">
-
-        <label>الـ ID في اللعبة:</label>
-        <input type="text" id="game_id" required placeholder="اكتب الـ ID الخاص بك">
-
-        <label>صورة التشكيلة (رابط الصورة أو رفع):</label>
-        <input type="text" id="squad_image_url" placeholder="رابط صورة التشكيلة">
-
-        <label>كلمة تحفيزية / وصية للمنافس:</label>
-        <textarea id="tawseya" rows="3" placeholder="اكتب كلمتك الاستفزازية أو التحفيزية..."></textarea>
-
-        <button type="submit">إتمام التسجيل</button>
+        <div class="form-group">
+            <label>اسم اللاعب:</label>
+            <input type="text" id="name" required placeholder="اكتب اسمك الثلاثي">
+        </div>
+        <div class="form-group">
+            <label>رقم التليفون (واتساب):</label>
+            <input type="tel" id="phone" required placeholder="01xxxxxxxx">
+        </div>
+        <div class="form-group">
+            <label>الـ ID في اللعبة:</label>
+            <input type="text" id="game_id" required placeholder="أدخل الـ ID الخاص بك">
+        </div>
+        <div class="form-group">
+            <label>صورة التشكيلة (من الموبايل):</label>
+            <input type="file" id="squadImageFile" accept="image/*" required>
+        </div>
+        <div class="form-group">
+            <label>كلمة استفزازية / وصية للمنافس:</label>
+            <textarea id="tawseya" rows="3" placeholder="اكتب كلمتك..."></textarea>
+        </div>
+        <button type="submit" id="submitBtn">تأكيد التسجيل</button>
+        <div class="loading" id="loadingText">جاري رفع البيانات والصورة، انتظر لحظات...</div>
     </form>
 </div>
 
