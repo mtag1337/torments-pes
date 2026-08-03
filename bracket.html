@@ -25,14 +25,16 @@
         .stream-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
 
         /* جدول المواجهات */
-        .matchup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-top: 15px; }
+        .matchup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-top: 15px; }
         .match-card { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-        .match-header { font-size: 12px; color: #94a3b8; margin-bottom: 8px; font-weight: bold; text-transform: uppercase; }
-        .vs-container { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-        .player-box { flex: 1; background: #1e293b; padding: 12px; border-radius: 8px; text-align: center; }
-        .player-box b { color: #60a5fa; display: block; font-size: 16px; margin-bottom: 4px; }
-        .vs-badge { background: var(--danger-color); color: white; padding: 6px 10px; border-radius: 50%; font-weight: 900; font-size: 12px; }
-        .tawseya-text { margin-top: 10px; font-size: 13px; color: #facc15; font-style: italic; text-align: center; background: rgba(250,204,21,0.05); padding: 6px; border-radius: 6px; }
+        .match-header { font-size: 12px; color: #94a3b8; margin-bottom: 8px; font-weight: bold; text-transform: uppercase; text-align: center; }
+        .vs-container { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+        .player-box { flex: 1; background: #1e293b; padding: 10px; border-radius: 8px; text-align: center; }
+        .player-box b { color: #60a5fa; display: block; font-size: 15px; margin-bottom: 2px; }
+        .player-squad { width: 100%; height: 65px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid #3b82f6; margin-top: 6px; transition: 0.2s; }
+        .player-squad:hover { transform: scale(1.05); }
+        .vs-badge { background: var(--danger-color); color: white; padding: 6px 10px; border-radius: 50%; font-weight: 900; font-size: 12px; align-self: center; }
+        .tawseya-text { margin-top: 6px; font-size: 11px; color: #facc15; font-style: italic; background: rgba(250,204,21,0.05); padding: 4px; border-radius: 4px; word-break: break-word; }
     </style>
 </head>
 <body>
@@ -40,15 +42,14 @@
 <div class="container">
     <div class="header">
         <h1>🎮 بث وبطولة الجيمنج الحية</h1>
-        <p style="color: #9ca3af;">تابع مباريات البطولة، جدول المواجهات، والبث المباشر للمنظم لحظة بلحظة</p>
+        <p style="color: #9ca3af;">تابع مباريات البطولة، جدول المواجهات، وصور التشكيلات والبث المباشر لحظة بلحظة</p>
     </div>
 
     <!-- بث المنظم المباشر -->
     <div class="card">
         <h3 style="color: #60a5fa; margin-top: 0; text-align: center;">🔴 بث المنظم المباشر</h3>
-        <div class="stream-container">
-            <!-- حط رابط بث اليوتيوب هنا (استبدل dQw4w9WgXcQ برابط بثك الحقيقي) -->
-            <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+        <div class="stream-container" id="streamContainerBox">
+            <p style="text-align: center; color: #9ca3af; padding-top: 20%; margin: 0;">جاري تحميل البث...</p>
         </div>
     </div>
 
@@ -67,6 +68,20 @@ const SUPABASE_ANON_KEY = "sb_publishable_Sveiq2WcgtBoIa7KMjlK3g_MCFXLVjK";
 
 async function loadLiveBracket() {
     try {
+        // 1. جلب رابط البث من جدول البطولات (آخر بطولة تم إنشاؤها)
+        const tRes = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?order=id.desc&limit=1`, {
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        const tournaments = await tRes.json();
+        const streamBox = document.getElementById('streamContainerBox');
+
+        if (tournaments && tournaments.length > 0 && tournaments[0].stream_url) {
+            streamBox.innerHTML = `<iframe src="${tournaments[0].stream_url}" allowfullscreen></iframe>`;
+        } else {
+            streamBox.innerHTML = `<p style="text-align: center; color: #ef4444; padding-top: 20%; margin: 0;">لم يتم إضافة رابط بث مباشر من قبل الأدمن بعد.</p>`;
+        }
+
+        // 2. جلب اللاعبين للمواجهات
         const res = await fetch(`${SUPABASE_URL}/rest/v1/players?select=*`, {
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
         });
@@ -94,15 +109,18 @@ async function loadLiveBracket() {
                         <div class="vs-container">
                             <div class="player-box">
                                 <b>${p1.name}</b>
-                                <span style="font-size:11px; color:#94a3b8;">ID: ${p1.game_id}</span>
+                                <span style="font-size:11px; color:#94a3b8; display:block;">ID: ${p1.game_id}</span>
+                                <img src="${p1.squad_image_url}" class="player-squad" onclick="window.open('${p1.squad_image_url}', '_blank')" title="اضغط لتكبير تشكيلة ${p1.name}">
+                                <div class="tawseya-text">💬 "${p1.tawseya || 'بدون وصية'}"</div>
                             </div>
                             <div class="vs-badge">VS</div>
                             <div class="player-box">
                                 <b>${p2.name}</b>
-                                <span style="font-size:11px; color:#94a3b8;">ID: ${p2.game_id}</span>
+                                <span style="font-size:11px; color:#94a3b8; display:block;">ID: ${p2.game_id}</span>
+                                <img src="${p2.squad_image_url}" class="player-squad" onclick="window.open('${p2.squad_image_url}', '_blank')" title="اضغط لتكبير تشكيلة ${p2.name}">
+                                <div class="tawseya-text">💬 "${p2.tawseya || 'بدون وصية'}"</div>
                             </div>
                         </div>
-                        ${p1.tawseya ? `<div class="tawseya-text">💬 وصية ${p1.name}: "${p1.tawseya}"</div>` : ''}
                     </div>
                 `;
             } else {
@@ -111,6 +129,8 @@ async function loadLiveBracket() {
                         <div class="match-header" style="color: #10b981;">تأهل مباشر (Bye)</div>
                         <div style="text-align: center; padding: 10px;">
                             <b style="color: #60a5fa; font-size: 16px;">${p1.name}</b>
+                            <img src="${p1.squad_image_url}" class="player-squad" style="max-width: 120px; margin: 8px auto; display:block;" onclick="window.open('${p1.squad_image_url}', '_blank')">
+                            <div class="tawseya-text">💬 "${p1.tawseya || 'بدون وصية'}"</div>
                             <p style="font-size: 12px; color: #9ca3af; margin: 5px 0 0 0;">صعد للدور التالي تلقائياً لعدم وجود منافس.</p>
                         </div>
                     </div>
