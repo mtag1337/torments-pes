@@ -3,75 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>التسجيل الرسمي في بطولة الجيمنج</title>
+    <title>التسجيل الرسمي في البطولات</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        :root {
-            --bg-color: #0b0f19;
-            --card-bg: #111827;
-            --accent-color: #3b82f6;
-            --text-main: #f3f4f6;
-            --border-color: #1f2937;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, sans-serif;
-            background: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .container {
-            width: 100%;
-            max-width: 480px;
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            border: 1px solid var(--border-color);
-        }
-        h2 { text-align: center; color: #60a5fa; margin-bottom: 25px; font-size: 24px; }
+        :root { --bg-color: #0b0f19; --card-bg: #111827; --accent-color: #3b82f6; --text-main: #f3f4f6; --border-color: #1f2937; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg-color); color: var(--text-main); padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { width: 100%; max-width: 480px; background: var(--card-bg); padding: 30px; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h2 { text-align: center; color: #60a5fa; margin-bottom: 25px; }
         .form-group { margin-bottom: 18px; }
         label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
-        input, textarea {
-            width: 100%;
-            padding: 12px 15px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            background: #0d1322;
-            color: var(--text-main);
-            font-size: 15px;
-            box-sizing: border-box;
-        }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent-color); }
-        input[type="file"] { padding: 8px; cursor: pointer; }
-        button {
-            width: 100%;
-            margin-top: 10px;
-            padding: 14px;
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        button:hover { opacity: 0.9; }
-        .loading { display: none; text-align: center; margin-top: 10px; color: #60a5fa; font-weight: bold; }
+        input, select, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: #0d1322; color: var(--text-main); box-sizing: border-box; }
+        button { width: 100%; margin-top: 10px; padding: 14px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .loading { display: none; text-align: center; color: #60a5fa; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>⚡ تسجيل بطولة الجيمنج</h2>
+    <h2>⚡ تسجيل البطولة</h2>
     <form id="registrationForm">
         <div class="form-group">
+            <label>اختر البطولة المتاحة:</label>
+            <select id="tournamentSelect" required>
+                <option value="">جاري تحميل البطولات المفتوحة...</option>
+            </select>
+        </div>
+        <div class="form-group">
             <label>اسم اللاعب:</label>
-            <input type="text" id="name" required placeholder="اكتب اسمك الثلاثي">
+            <input type="text" id="name" required placeholder="اسمك الثلاثي">
         </div>
         <div class="form-group">
             <label>رقم التليفون (واتساب):</label>
@@ -82,18 +41,113 @@
             <input type="text" id="game_id" required placeholder="أدخل الـ ID الخاص بك">
         </div>
         <div class="form-group">
-            <label>صورة التشكيلة (من الموبايل):</label>
+            <label>صورة التشكيلة:</label>
             <input type="file" id="squadImageFile" accept="image/*" required>
         </div>
         <div class="form-group">
-            <label>كلمة استفزازية / وصية للمنافس:</label>
-            <textarea id="tawseya" rows="3" placeholder="اكتب كلمتك..."></textarea>
+            <label>كلمة استفزازية للمنافس:</label>
+            <textarea id="tawseya" rows="2" placeholder="كلمتك للمنافس..."></textarea>
         </div>
         <button type="submit" id="submitBtn">تأكيد التسجيل</button>
-        <div class="loading" id="loadingText">جاري رفع البيانات والصورة، انتظر لحظات...</div>
+        <div class="loading" id="loadingText">جاري فحص البيانات والرفع...</div>
     </form>
 </div>
 
-<script src="script.js"></script>
+<script>
+const SUPABASE_URL = "https://pudnffhwusacrquqcjei.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_Sveiq2WcgtBoIa7KMjlK3g_MCFXLVjK";
+
+async function loadActiveTournaments() {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?status=eq.open`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    const tours = await res.json();
+    const select = document.getElementById('tournamentSelect');
+    
+    if(!tours || tours.length === 0) {
+        select.innerHTML = '<option value="">لا توجد بطولات مفتوحة للتسجيل حالياً</option>';
+        document.getElementById('submitBtn').disabled = true;
+        return;
+    }
+
+    select.innerHTML = '<option value="">-- اختر البطولة المناسبة --id--</option>' + tours.map(t => `<option value="${t.id}">${t.title} (${t.game_name})</option>`).join('');
+}
+loadActiveTournaments();
+
+document.getElementById('registrationForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const tournament_id = document.getElementById('tournamentSelect').value;
+    const name = document.getElementById('name').value;
+    const phone = document.getElementById('phone').value;
+    const game_id = document.getElementById('game_id').value;
+    const tawseya = document.getElementById('tawseya').value;
+    const imageFile = document.getElementById('squadImageFile').files[0];
+
+    if(!tournament_id) {
+        Swal.fire('خطأ', 'برجاء اختيار البطولة أولاً!', 'warning');
+        return;
+    }
+
+    const submitBtn = document.getElementById('submitBtn');
+    const loadingText = document.getElementById('loadingText');
+    submitBtn.style.display = 'none';
+    loadingText.style.display = 'block';
+
+    try {
+        // 1. تحقق من عدد اللاعبين في البطولة والحد الأقصى
+        const tRes = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?id=eq.${tournament_id}&select=max_players`, {
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        const tData = await tRes.json();
+        const maxLimit = tData[0]?.max_players || 16;
+
+        const pCountRes = await fetch(`${SUPABASE_URL}/rest/v1/players?tournament_id=eq.${tournament_id}&select=id,game_id`, {
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        const playersList = await pCountRes.json();
+
+        if (playersList.length >= maxLimit) {
+            throw new Error('عذراً، اكتمل العدد الأقصى للبطولة ولا توجد أماكن شاغرة!');
+        }
+
+        // تحقق من عدم تكرار الـ ID في نفس البطولة
+        if (playersList.some(p => p.game_id === game_id)) {
+            throw new Error('هذا الـ ID مسجل مسبقاً في هذه البطولة!');
+        }
+
+        // 2. رفع الصورة
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+        
+        const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/squads/${fileName}`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'x-upsert': 'true' },
+            body: imageFile
+        });
+        if (!uploadRes.ok) throw new Error('فشل رفع الصورة على الخادم.');
+
+        const squad_image_url = `${SUPABASE_URL}/storage/v1/object/public/squads/${fileName}`;
+
+        // 3. حفظ اللاعب
+        const dbResponse = await fetch(`${SUPABASE_URL}/rest/v1/players`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+            body: JSON.stringify({ tournament_id: parseInt(tournament_id), name, phone, game_id, squad_image_url, tawseya })
+        });
+
+        if (!dbResponse.ok) throw new Error('فشل تسجيل البيانات.');
+
+        Swal.fire('تم بنجاح! 🔥', 'تم تسجيلك في البطولة وتثبيت تشكيلتك بنجاح.', 'success');
+        document.getElementById('registrationForm').reset();
+        loadActiveTournaments();
+
+    } catch (error) {
+        Swal.fire('تنبيه!', error.message, 'error');
+    } finally {
+        submitBtn.style.display = 'block';
+        loadingText.style.display = 'none';
+    }
+});
+</script>
 </body>
 </html>
