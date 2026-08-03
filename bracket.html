@@ -49,13 +49,13 @@
         <p style="color: #9ca3af;">تابع مباريات البطولة، جدول المواجهات، وصور التشكيلات والبث المباشر لحظة بلحظة</p>
     </div>
 
-    <!-- بث المنظم المباشر (محافظ عليه كما هو بدون أي نقصان) -->
+    <!-- بث المنظم المباشر -->
     <div class="card">
         <h3 style="color: #60a5fa; margin-top: 0; text-align: center;">🔴 بث المنظم المباشر</h3>
         <div class="stream-container" id="streamContainerBox">
             <p style="text-align: center; color: #9ca3af; padding-top: 20%; margin: 0;">جاري تحميل البث...</p>
         </div>
-        <!-- الزر الاحتياطي يظهر تلقائياً أسفل البث لحل مشكلة رفض يوتيوب للاتصال (X-Frame-Options) -->
+        <!-- الزر الاحتياطي -->
         <div id="fallbackStreamBtn" style="text-align: center; margin-top: 15px; display: none;">
             <a href="" id="directStreamLink" target="_blank" style="background: #ef4444; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 12px rgba(239,68,68,0.4);">▶️ اضغط هنا لفتح البث مباشرة على يوتيوب (لو لم يعمل العرض أعلاه)</a>
         </div>
@@ -136,8 +136,8 @@ async function loadLiveBracket() {
             return;
         }
 
-        // خلط عشوائي للمواجهات
-        let arr = [...players].sort(() => Math.random() - 0.5);
+        // تثبيت وترتيب اللاعبين بناءً على الـ id لمنع أي تغيير عشوائي عند تحديث الصفحة
+        let arr = [...players].sort((a, b) => a.id - b.id);
         container.innerHTML = '';
 
         let matchNum = 1;
