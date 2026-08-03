@@ -51,6 +51,10 @@
         <div class="stream-container" id="streamContainerBox">
             <p style="text-align: center; color: #9ca3af; padding-top: 20%; margin: 0;">جاري تحميل البث...</p>
         </div>
+        <!-- الزر الاحتياطي يظهر تلقائياً أسفل البث لحل مشكلة رفض يوتيوب للاتصال (X-Frame-Options) -->
+        <div id="fallbackStreamBtn" style="text-align: center; margin-top: 15px; display: none;">
+            <a href="" id="directStreamLink" target="_blank" style="background: #ef4444; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 12px rgba(239,68,68,0.4);">▶️ اضغط هنا لفتح البث مباشرة على يوتيوب (لو لم يعمل العرض أعلاه)</a>
+        </div>
     </div>
 
     <!-- جدول ومباريات البطولة -->
@@ -74,11 +78,27 @@ async function loadLiveBracket() {
         });
         const tournaments = await tRes.json();
         const streamBox = document.getElementById('streamContainerBox');
+        const fallbackBtn = document.getElementById('fallbackStreamBtn');
+        const directLink = document.getElementById('directStreamLink');
 
         if (tournaments && tournaments.length > 0 && tournaments[0].stream_url) {
-            streamBox.innerHTML = `<iframe src="${tournaments[0].stream_url}" allowfullscreen></iframe>`;
+            let rawUrl = tournaments[0].stream_url.trim();
+            
+            // عرض البث داخل iframe
+            streamBox.innerHTML = `<iframe src="${rawUrl}" allowfullscreen></iframe>`;
+            
+            // تجهيز الرابط الاحتياطي المباشر في حال رفض المتصفح أو يوتيوب العرض داخل الـ iframe
+            let watchUrl = rawUrl;
+            if (rawUrl.includes('/embed/')) {
+                let videoId = rawUrl.split('/embed/')[1].split('?')[0];
+                watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+            }
+            
+            directLink.href = watchUrl;
+            fallbackBtn.style.display = 'block';
         } else {
             streamBox.innerHTML = `<p style="text-align: center; color: #ef4444; padding-top: 20%; margin: 0;">لم يتم إضافة رابط بث مباشر من قبل الأدمن بعد.</p>`;
+            fallbackBtn.style.display = 'none';
         }
 
         // 2. جلب اللاعبين للمواجهات
