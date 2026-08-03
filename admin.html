@@ -28,6 +28,8 @@
         img.squad-thumb:hover { transform: scale(1.1); }
         .tour-item { background: #0d1322; padding: 10px 15px; margin-bottom: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #1f2937; flex-wrap: wrap; gap: 10px; }
         .tour-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .badge-live { background: #dc2626; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -71,7 +73,7 @@
         <div class="form-group" style="max-width: 400px; margin: 10px auto;">
             <select id="drawSelect"><option value="">اختر البطولة لإجراء القرعة...</option></select>
         </div>
-        <button onclick="runDraw()" class="btn-main" style="background: #10b981; max-width: 400px; margin: auto;">بدء القرعة عشوائياً 🔥</button>
+        <button onclick="runAndSaveDraw()" class="btn-main" style="background: #10b981; max-width: 400px; margin: auto;">بدء القرعة عشوائياً وحفظها 🔥</button>
         <div id="drawResult" style="margin-top: 15px; text-align: right;"></div>
     </div>
 
@@ -112,20 +114,16 @@ async function auth() {
     } else { auth(); }
 }
 
-// دالة ذكية لتحويل كافة أشكال روابط يوتيوب إلى صيغة الـ Embed المظبوطة
+// دالة لتحويل روابط يوتيوب إلى Embed
 function formatYoutubeUrl(url) {
     if (!url) return '';
     url = url.trim();
-    
     let videoId = '';
-    
     if (url.includes('/live/')) {
         videoId = url.split('/live/')[1].split('?')[0];
     } else if (url.includes('watch?v=')) {
         videoId = url.split('watch?v=')[1];
-        if (videoId.includes('&')) {
-            videoId = videoId.split('&')[0];
-        }
+        if (videoId.includes('&')) { videoId = videoId.split('&')[0]; }
     } else if (url.includes('youtu.be/')) {
         videoId = url.split('youtu.be/')[1].split('?')[0];
     } else if (url.includes('/embed/')) {
@@ -133,21 +131,17 @@ function formatYoutubeUrl(url) {
     } else {
         videoId = url;
     }
-    
-    if (videoId) {
-        return `https://www.youtube.com/embed/${videoId}`;
-    }
+    if (videoId) { return `https://www.youtube.com/embed/${videoId}`; }
     return url;
 }
 
-// إنشاء بطولة جديدة مع التحويل التلقائي لرابط البث
+// إنشاء بطولة جديدة
 document.getElementById('createTourForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const title = document.getElementById('tTitle').value;
     const game_name = document.getElementById('tGame').value;
     const max_players = parseInt(document.getElementById('tMax').value);
     const rawStream = document.getElementById('tStream').value;
-    
     const stream_url = formatYoutubeUrl(rawStream);
 
     try {
@@ -159,13 +153,7 @@ document.getElementById('createTourForm').addEventListener('submit', async (e) =
                 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
                 'Prefer': 'return=representation'
             },
-            body: JSON.stringify({ 
-                title: title, 
-                game_name: game_name, 
-                max_players: max_players, 
-                status: 'open',
-                stream_url: stream_url 
-            })
+            body: JSON.stringify({ title, game_name, max_players, status: 'open', stream_url })
         });
 
         if (res.ok) {
@@ -174,16 +162,14 @@ document.getElementById('createTourForm').addEventListener('submit', async (e) =
             loadTours();
         } else {
             const errData = await res.json();
-            console.error("Supabase Error:", errData);
             Swal.fire('خطأ', `فشل إنشاء البطولة: ${errData.message || 'خطأ غير معروف'}`, 'error');
         }
     } catch (err) {
-        console.error("Network Error:", err);
         Swal.fire('خطأ', 'حدث خطأ في الاتصال بالشبكة.', 'error');
     }
 });
 
-// تحميل البطولات مع زر التعديل، زر الشجرة، وزر الحذف
+// تحميل البطولات مع إمكانية عرض مؤشر البث الحي والحالة
 async function loadTours() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?select=*`, { 
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
@@ -193,10 +179,14 @@ async function loadTours() {
     if(Array.isArray(data)) {
         document.getElementById('tList').innerHTML = data.map(t => `
             <div class="tour-item">
-                <span><b>${t.title}</b> (${t.game_name}) - السعة: ${t.max_players} | <span style="color:#10b981; font-weight:bold;">${t.status}</span></span>
+                <span>
+                    <b>${t.title}</b> (${t.game_name}) - السعة: ${t.max_players} | 
+                    <span style="color:#10b981; font-weight:bold;">${t.status}</span>
+                    ${t.stream_url ? '<span class="badge-live" style="margin-right: 8px;">بث مباشر 🔴</span>' : ''}
+                </span>
                 <div class="tour-actions">
                     <a href="bracket.html?id=${t.id}" target="_blank" class="btn-bracket">📊 الشجرة</a>
-                    <button class="btn-edit" onclick="openEditTournamentModal(${t.id}, '${t.title}', '${t.game_name}', ${t.max_players}, '${t.stream_url || ''}')">تعديل ✏️</button>
+                    <button class="btn-edit" onclick="openEditTournamentModal(${t.id}, '${t.title}', '${t.game_name}', ${t.max_players}, '${t.stream_url || ''}', '${t.status}')">تعديل ✏️</button>
                     <button class="btn-danger" onclick="deleteTournament(${t.id})">حذف 🗑️</button>
                 </div>
             </div>
@@ -205,8 +195,8 @@ async function loadTours() {
     }
 }
 
-// نافذة تعديل بيانات البطولة باستخدام SweetAlert2
-async function openEditTournamentModal(id, currentTitle, currentGame, currentMax, currentStream) {
+// نافذة تعديل البطولة مع التحكم في الحالة ورابط البث
+async function openEditTournamentModal(id, currentTitle, currentGame, currentMax, currentStream, currentStatus) {
     const { value: formValues } = await Swal.fire({
         title: 'تعديل بيانات البطولة',
         background: '#111827',
@@ -225,6 +215,14 @@ async function openEditTournamentModal(id, currentTitle, currentGame, currentMax
                 <input type="number" id="swal-tour-max" class="swal2-input" value="${currentMax}" style="width:90%; margin:0; background:#0d1322; color:#fff; border:1px solid #374151;">
             </div>
             <div style="text-align: right; margin-bottom: 10px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">حالة البطولة:</label>
+                <select id="swal-tour-status" class="swal2-input" style="width:90%; margin:0; background:#0d1322; color:#fff; border:1px solid #374151;">
+                    <option value="open" ${currentStatus === 'open' ? 'selected' : ''}>مفتوحة للتسجيل (open)</option>
+                    <option value="ongoing" ${currentStatus === 'ongoing' ? 'selected' : ''}>جارية (ongoing)</option>
+                    <option value="ended" ${currentStatus === 'ended' ? 'selected' : ''}>منتهية (ended)</option>
+                </select>
+            </div>
+            <div style="text-align: right; margin-bottom: 10px;">
                 <label style="display:block; margin-bottom:5px; font-weight:bold;">رابط البث (يوتيوب):</label>
                 <input id="swal-tour-stream" class="swal2-input" value="${currentStream}" style="width:90%; margin:0; background:#0d1322; color:#fff; border:1px solid #374151;">
             </div>
@@ -238,6 +236,7 @@ async function openEditTournamentModal(id, currentTitle, currentGame, currentMax
                 title: document.getElementById('swal-tour-title').value,
                 game_name: document.getElementById('swal-tour-game').value,
                 max_players: parseInt(document.getElementById('swal-tour-max').value),
+                status: document.getElementById('swal-tour-status').value,
                 stream_url: formatYoutubeUrl(document.getElementById('swal-tour-stream').value)
             }
         }
@@ -259,16 +258,15 @@ async function openEditTournamentModal(id, currentTitle, currentGame, currentMax
                 Swal.fire('تم التعديل!', 'تم تحديث بيانات البطولة بنجاح.', 'success');
                 loadTours();
             } else {
-                throw new Error('فشل تحديث البطولة في قاعدة البيانات');
+                throw new Error('فشل تحديث البطولة');
             }
         } catch (err) {
-            console.error(err);
             Swal.fire('خطأ!', 'حدث خطأ أثناء محاولة تعديل البطولة.', 'error');
         }
     }
 }
 
-// دالة حذف البطولة من القاعدة
+// دالة حذف البطولة
 async function deleteTournament(tId) {
     const confirm = await Swal.fire({ 
         title: 'هل تريد حذف هذه البطولة؟', 
@@ -319,7 +317,7 @@ async function loadPlayers() {
     `).join('');
 }
 
-// نافذة تعديل بيانات اللاعب باستخدام SweetAlert2
+// نافذة تعديل بيانات اللاعب
 async function openEditPlayerModal(id, currentName, currentPhone, currentGameId, currentTawseya) {
     const { value: formValues } = await Swal.fire({
         title: 'تعديل بيانات اللاعب',
@@ -373,10 +371,9 @@ async function openEditPlayerModal(id, currentName, currentPhone, currentGameId,
                 Swal.fire('تم التعديل!', 'تم تحديث بيانات اللاعب بنجاح.', 'success');
                 loadPlayers();
             } else {
-                throw new Error('فشل التحديث في قاعدة البيانات');
+                throw new Error('فشل التحديث');
             }
         } catch (err) {
-            console.error(err);
             Swal.fire('خطأ!', 'حدث خطأ أثناء محاولة تعديل البيانات.', 'error');
         }
     }
@@ -394,8 +391,8 @@ async function del(id) {
     }
 }
 
-// قرعة عشوائية للمواجهات
-async function runDraw() {
+// نظام القرعة العشوائية مع الحفظ التلقائي في جدول المباريات (matches) لكي تظهر بالشجرة
+async function runAndSaveDraw() {
     const tId = document.getElementById('drawSelect').value;
     if(!tId) { Swal.fire('تنبيه', 'اختر البطولة أولاً', 'warning'); return; }
 
@@ -405,20 +402,65 @@ async function runDraw() {
     const players = await res.json();
     if(!players || players.length < 2) { Swal.fire('تنبيه', 'اللاعبين المسجلين أقل من لاعبين اثنين!', 'warning'); return; }
 
+    // خلط اللاعبين عشوائياً
     let arr = [...players].sort(() => Math.random() - 0.5);
     let html = '<h4 style="color:#60a5fa; margin-bottom:10px;">نتائج المواجهات الإقصائية:</h4>';
     
+    // أولاً: مسح المباريات القديمة الخاصة بالبطولة إن وجدت لمنع التكرار
+    await fetch(`${SUPABASE_URL}/rest/v1/matches?tournament_id=eq.${tId}`, {
+        method: 'DELETE',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+
     let matchNum = 1;
-    for(let i=0; i<arr.length; i+=2) {
-        if(arr[i+1]) {
-            html += `<div style="background:#0d1322; padding:8px 12px; margin-bottom:6px; border-radius:6px; border-right:3px solid #ef4444;">⚔️ مواجهة #${matchNum}: <b>${arr.at(i).name}</b> ضد <b>${arr.at(i+1).name}</b></div>`;
+    let matchesToInsert = [];
+
+    for(let i = 0; i < arr.length; i += 2) {
+        let player1 = arr[i];
+        let player2 = arr[i+1] || null;
+
+        if(player2) {
+            html += `<div style="background:#0d1322; padding:8px 12px; margin-bottom:6px; border-radius:6px; border-right:3px solid #ef4444;">⚔️ مواجهة #${matchNum}: <b>${player1.name}</b> ضد <b>${player2.name}</b></div>`;
+            matchesToInsert.push({
+                tournament_id: parseInt(tId),
+                round_name: 'دور الـ ' + arr.length,
+                player1_id: player1.id,
+                player2_id: player2.id,
+                winner_id: null,
+                status: 'pending'
+            });
         } else {
-            html += `<div style="background:#0d1322; padding:8px 12px; margin-bottom:6px; border-radius:6px; border-right:3px solid #10b981; color:#10b981;">✨ تأهل مباشر (Bye): <b>${arr.at(i).name}</b></div>`;
+            html += `<div style="background:#0d1322; padding:8px 12px; margin-bottom:6px; border-radius:6px; border-right:3px solid #10b981; color:#10b981;">✨ تأهل مباشر (Bye): <b>${player1.name}</b></div>`;
+            // في حالة التأهل الفردي المباشر، يمكنك اعتباره فائزاً مباشراً أو حفظه كمواجهة طرفها الثاني فارغ
+            matchesToInsert.push({
+                tournament_id: parseInt(tId),
+                round_name: 'دور الـ ' + arr.length,
+                player1_id: player1.id,
+                player2_id: null,
+                winner_id: player1.id,
+                status: 'completed'
+            });
         }
         matchNum++;
     }
-    document.getElementById('drawResult').innerHTML = html;
-    Swal.fire('تمت القرعة بنجاح! 🔥', 'تم توليد المواجهات العشوائية.', 'success');
+
+    // إرسال المواجهات الجديدة إلى قاعدة البيانات (Supabase)
+    const saveRes = await fetch(`${SUPABASE_URL}/rest/v1/matches`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify(matchesToInsert)
+    });
+
+    if (saveRes.ok) {
+        document.getElementById('drawResult').innerHTML = html;
+        Swal.fire('تمت القرعة والحفظ بنجاح! 🔥', 'تم توليد وتثبيت المواجهات في شجرة البطولة.', 'success');
+    } else {
+        Swal.fire('خطأ', 'فشل حفظ المواجهات في قاعدة البيانات.', 'error');
+    }
 }
 
 auth();
