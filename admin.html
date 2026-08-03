@@ -168,11 +168,9 @@ document.getElementById('createTourForm').addEventListener('submit', async (e) =
             loadTours();
         } else {
             const errData = await res.json();
-            console.error("تفاصيل خطأ إنشاء البطولة:", errData);
             Swal.fire('خطأ', `فشل إنشاء البطولة: ${errData.message || res.statusText}`, 'error');
         }
     } catch (err) {
-        console.error("خطأ شبكة:", err);
         Swal.fire('خطأ', 'حدث خطأ في الاتصال بالشبكة.', 'error');
     }
 });
@@ -204,7 +202,7 @@ async function loadTours() {
     }
 }
 
-// نافذة متابعة البطولة واختيار الفائزين للمواجهات (محدثة ومصححة)
+// نافذة متابعة البطولة واختيار الفائزين للمواجهات (معدلة ومحدثة تماماً لتظهر أي خطأ)
 async function openTournamentTracker(tourId, tourTitle) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/matches?tournament_id=eq.${tourId}&select=*`, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
@@ -233,8 +231,8 @@ async function openTournamentTracker(tourId, tourTitle) {
                     ${m.player2_id !== null ? `
                         <select class="match-winner-select" data-match-id="${m.id}" style="width: auto; padding: 6px; background: #111827; color: #fff; border: 1px solid #374151; border-radius: 4px;">
                             <option value="">اختر الفائز...</option>
-                            <option value="${m.player1_id}" ${m.winner_id === m.player1_id ? 'selected' : ''}>${p1Name}</option>
-                            <option value="${m.player2_id}" ${m.winner_id === m.player2_id ? 'selected' : ''}>${p2Name}</option>
+                            <option value="${m.player1_id}" ${String(m.winner_id) === String(m.player1_id) ? 'selected' : ''}>${p1Name}</option>
+                            <option value="${m.player2_id}" ${String(m.winner_id) === String(m.player2_id) ? 'selected' : ''}>${p2Name}</option>
                         </select>
                     ` : `<span style="color: #10b981; font-weight: bold;">تم التأهل تلقائياً</span>`}
                 </div>
@@ -243,7 +241,7 @@ async function openTournamentTracker(tourId, tourTitle) {
     });
     matchesHtml += `</div>`;
 
-    const { isConfirmed } = await Swal.fire({
+    const result = await Swal.fire({
         title: `متابعة مباريات: ${tourTitle}`,
         html: matchesHtml,
         background: '#111827',
@@ -251,28 +249,42 @@ async function openTournamentTracker(tourId, tourTitle) {
         width: '650px',
         showCancelButton: true,
         confirmButtonText: 'حفظ النتائج وتحديث الشجرة 💾',
-        cancelButtonText: 'إغلاق',
-        preConfirm: () => {
-            let updates = [];
-            const selects = document.querySelectorAll('.match-winner-select');
-            selects.forEach(selectEl => {
-                if (selectEl.value) {
-                    const matchId = parseInt(selectEl.getAttribute('data-match-id'));
-                    const winnerId = parseInt(selectEl.value);
-                    updates.push({
-                        id: matchId,
-                        winner_id: winnerId,
-                        status: 'completed'
-                    });
-                }
-            });
-            return updates;
-        }
+        cancelButtonText: 'إغلاق'
     });
 
-    if (isConfirmed && isConfirmed.length > 0) {
+    // تنفيذ الحفظ خارج preConfirm لضمان عدم حدوث أي تجميد صامت
+    if (result.isConfirmed) {
+        let updates = [];
+        const selects = document.querySelectorAll('.match-winner-select');
+        
+        selects.forEach(selectEl => {
+            if (selectEl.value !== "") {
+                const matchId = parseInt(selectEl.getAttribute('data-match-id'));
+                const winnerId = parseInt(selectEl.value);
+                updates.push({
+                    id: matchId,
+                    winner_id: winnerId,
+                    status: 'completed'
+                });
+            }
+        });
+
+        if (updates.length === 0) {
+            Swal.fire('تنبيه', 'لم تقم بتحديد أي فائز!', 'info');
+            return;
+        }
+
+        // إظهار نافذة تحميل أثناء الحفظ
+        Swal.fire({
+            title: 'جاري حفظ النتائج...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); },
+            background: '#111827',
+            color: '#fff'
+        });
+
         try {
-            for (let update of isConfirmed) {
+            for (let update of updates) {
                 const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${update.id}`, {
                     method: 'PATCH',
                     headers: {
@@ -289,15 +301,15 @@ async function openTournamentTracker(tourId, tourTitle) {
 
                 if (!patchRes.ok) {
                     const errorData = await patchRes.json();
-                    console.error("تفاصيل خطأ سوبابيس (التحديث):", errorData);
-                    alert("حدث خطأ أثناء تحديث النتيجة: " + (errorData.message || patchRes.statusText));
-                    return;
+                    console.error("خطأ من سوبابيس:", errorData);
+                    throw new Error(errorData.message || patchRes.statusText);
                 }
             }
-            Swal.fire('تم الحفظ!', 'تم تحديث نتائج المباريات بنجاح، وستظهر في شجرة البطولة.', 'success');
+
+            Swal.fire('تم الحفظ بنجاح! 🔥', 'تم تحديث نتائج المباريات، وستظهر في شجرة البطولة.', 'success');
         } catch (err) {
-            console.error("خطأ شبكة:", err);
-            Swal.fire('خطأ', 'حدث خطأ أثناء حفظ النتائج.', 'error');
+            console.error("خطأ عام أثناء الحفظ:", err);
+            Swal.fire('خطأ في الحفظ', 'حدث خطأ أثناء الاتصال بقاعدة البيانات: ' + err.message, 'error');
         }
     }
 }
@@ -368,7 +380,6 @@ async function openEditTournamentModal(id, currentTitle, currentGame, currentMax
                 loadPlayers();
             } else {
                 const errData = await res.json();
-                console.error("تفاصيل خطأ تحديث البطولة:", errData);
                 throw new Error(errData.message || 'فشل تحديث البطولة');
             }
         } catch (err) {
@@ -500,7 +511,6 @@ async function openEditPlayerModal(id, currentName, currentPhone, currentGameId,
                 loadPlayers();
             } else {
                 const errData = await res.json();
-                console.error("تفاصيل خطأ تحديث اللاعب:", errData);
                 throw new Error(errData.message || 'فشل التحديث');
             }
         } catch (err) {
@@ -521,7 +531,7 @@ async function del(id) {
     }
 }
 
-// نظام القرعة العشوائية مع معالجة الأخطاء والرسائل المحدثة
+// نظام القرعة العشوائية
 async function runAndSaveDraw() {
     const tId = document.getElementById('drawSelect').value;
     if(!tId) { Swal.fire('تنبيه', 'اختر البطولة أولاً', 'warning'); return; }
@@ -535,7 +545,6 @@ async function runAndSaveDraw() {
     let arr = [...players].sort(() => Math.random() - 0.5);
     let html = '<h4 style="color:#60a5fa; margin-bottom:10px;">نتائج المواجهات الإقصائية:</h4>';
     
-    // مسح المواجهات القديمة أولاً
     await fetch(`${SUPABASE_URL}/rest/v1/matches?tournament_id=eq.${tId}`, {
         method: 'DELETE',
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
@@ -572,7 +581,6 @@ async function runAndSaveDraw() {
         matchNum++;
     }
 
-    // إرسال المواجهات الجديدة مع الكود المطلوب لمعالجة الأخطاء
     const response = await fetch(`${SUPABASE_URL}/rest/v1/matches`, {
         method: 'POST',
         headers: {
@@ -586,7 +594,6 @@ async function runAndSaveDraw() {
 
     if (!response.ok) {
         const errorData = await response.json();
-        console.error("تفاصيل خطأ سوبابيس:", errorData); 
         alert("حدث خطأ أثناء حفظ المباريات: " + (errorData.message || response.statusText));
         return;
     }
