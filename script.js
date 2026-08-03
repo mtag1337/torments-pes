@@ -25,6 +25,17 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
     loadingText.style.display = 'block';
 
     try {
+        // 0. جلب أحدث بطولة نشطة لربط اللاعب بها تلقائياً
+        const tRes = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?order=id.desc&limit=1`, {
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        const tournaments = await tRes.json();
+
+        if (!tournaments || tournaments.length === 0) {
+            throw new Error('لا توجد أي بطولات نشطة حالياً لتسجيل اللاعب فيها.');
+        }
+        const currentTournamentId = tournaments[0].id;
+
         // 1. رفع الصورة إلى Supabase Storage (Bucket: squads)
         const fileExt = imageFile.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
@@ -45,7 +56,7 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
 
         const squad_image_url = `${SUPABASE_URL}/storage/v1/object/public/squads/${fileName}`;
 
-        // 2. حفظ بيانات اللاعب في الجدول
+        // 2. حفظ بيانات اللاعب في الجدول مع ربطه بالبطولة الحالية (tournament_id)
         const dbResponse = await fetch(`${SUPABASE_URL}/rest/v1/players`, {
             method: 'POST',
             headers: {
@@ -54,7 +65,14 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
                 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
                 'Prefer': 'return=representation'
             },
-            body: JSON.stringify({ name, phone, game_id, squad_image_url, tawseya })
+            body: JSON.stringify({ 
+                name, 
+                phone, 
+                game_id, 
+                squad_image_url, 
+                tawseya, 
+                tournament_id: currentTournamentId // ربط اللاعب بالبطولة النشطة هنا
+            })
         });
 
         if (!dbResponse.ok) {
@@ -63,7 +81,7 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
 
         // 3. إرسال إشعار فوري لـ تيليجرام
         if (TELEGRAM_BOT_TOKEN !== "حط_توكن_البوت_هنا") {
-            const message = `🚨 تسجيل لاعب جديد في البطولة!\n\n👤 الاسم: ${name}\n📱 الموبايل: ${phone}\n🎮 الـ ID: ${game_id}\n💬 الوصية: ${tawseya || 'بدون'}`;
+            const message = `🚨 تسجيل لاعب جديد في البطولة!\n\n👤 الاسم: ${name}\n📱 الموبايل: ${phone}\n🎮 الـ ID: ${game_id}\n💬 الوصية: ${tawseya || 'بدون'}\n🏆 البطولة: ${tournaments[0].title}`;
             await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -73,7 +91,7 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
 
         Swal.fire({
             title: 'تم تسجيلك بنجاح! 🔥',
-            text: 'تم إرسال بياناتك وصورة تشكيلتك بنجاح.',
+            text: 'تم إرسال بياناتك وصورة تشكيلتك بنجاح للبطولة.',
             icon: 'success',
             confirmButtonText: 'حسناً'
         });
@@ -82,7 +100,7 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
 
     } catch (error) {
         console.error(error);
-        Swal.fire('خطأ!', 'حدث خطأ ما أثناء التسجيل، حاول مرة أخرى.', 'error');
+        Swal.fire('خطأ!', error.message || 'حدث خطأ ما أثناء التسجيل، حاول مرة أخرى.', 'error');
     } finally {
         submitBtn.style.display = 'block';
         loadingText.style.display = 'none';
