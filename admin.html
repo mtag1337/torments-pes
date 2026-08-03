@@ -21,6 +21,8 @@
         .btn-edit:hover { background: #2563eb; }
         .btn-bracket { background: #10b981; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold; display: inline-block; transition: 0.2s; }
         .btn-bracket:hover { background: #059669; }
+        .btn-track { background: #8b5cf6; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; display: inline-block; }
+        .btn-track:hover { background: #7c3aed; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #0d1322; border-radius: 6px; overflow: hidden; }
         th, td { padding: 10px; text-align: center; border-bottom: 1px solid #1f2937; font-size: 14px; }
         th { background: #1f2937; color: #60a5fa; }
@@ -106,6 +108,7 @@ const SUPABASE_URL = "https://pudnffhwusacrquqcjei.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Sveiq2WcgtBoIa7KMjlK3g_MCFXLVjK";
 
 let globalTournaments = []; // مصفوفة لتخزين البطولات المتاحة للربط مع اللاعبين
+let globalPlayers = [];    // مصفوفة لتخزين اللاعبين لتسهيل جلب بياناتهم في المتابعة
 
 // حماية الباسورد
 async function auth() {
@@ -172,7 +175,7 @@ document.getElementById('createTourForm').addEventListener('submit', async (e) =
     }
 });
 
-// تحميل البطولات مع إمكانية عرض مؤشر البث الحي والحالة
+// تحميل البطولات مع زر المتابعة الجديد
 async function loadTours() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?select=*`, { 
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
@@ -188,6 +191,7 @@ async function loadTours() {
                     ${t.stream_url ? '<span class="badge-live" style="margin-right: 8px;">بث مباشر 🔴</span>' : ''}
                 </span>
                 <div class="tour-actions">
+                    <button class="btn-track" onclick="openTournamentTracker(${t.id}, '${t.title}')">متابعة 🎮</button>
                     <a href="bracket.html?id=${t.id}" target="_blank" class="btn-bracket">📊 الشجرة</a>
                     <button class="btn-edit" onclick="openEditTournamentModal(${t.id}, '${t.title}', '${t.game_name}', ${t.max_players}, '${t.stream_url || ''}', '${t.status}')">تعديل ✏️</button>
                     <button class="btn-danger" onclick="deleteTournament(${t.id})">حذف 🗑️</button>
@@ -195,6 +199,99 @@ async function loadTours() {
             </div>
         `).join('');
         document.getElementById('drawSelect').innerHTML = '<option value="">اختر البطولة للقرعة...</option>' + globalTournaments.map(t => `<option value="${t.id}">${t.title}</option>`).join('');
+    }
+}
+
+// دالة نافذة متابعة البطولة واختيار الفائزين للمواجهات
+async function openTournamentTracker(tourId, tourTitle) {
+    // جلب مواجهات هذه البطولة
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/matches?tournament_id=eq.${tourId}&select=*`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    const matches = await res.json();
+
+    if (!matches || matches.length === 0) {
+        Swal.fire('تنبيه', 'لا توجد مواجهات مسجلة لهذه البطولة بعد. يرجى عمل قرعة عشوائية أولاً!', 'warning');
+        return;
+    }
+
+    // بناء واجهة عرض المواجهات داخل SweetAlert2
+    let matchesHtml = `<div style="max-height: 400px; overflow-y: auto; text-align: right; padding: 5px;">`;
+    
+    matches.forEach((m, index) => {
+        const p1 = globalPlayers.find(pl => pl.id === m.player1_id);
+        const p2 = globalPlayers.find(pl => pl.id === m.player2_id);
+        
+        const p1Name = p1 ? p1.name : 'لاعب غير محدد';
+        const p2Name = p2 ? p2.name : (m.player2_id === null ? 'تأهل مباشر (Bye)' : 'لاعب غير محدد');
+
+        matchesHtml += `
+            <div style="background: #0d1322; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #1f2937;">
+                <div style="font-weight: bold; color: #60a5fa; margin-bottom: 6px;">مواجهة #${index + 1} (${m.round_name || 'دور إقصائي'})</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <span>⚔️ <b>${p1Name}</b> ضد <b>${p2Name}</b></span>
+                    ${m.player2_id !== null ? `
+                        <select id="winner-select-${m.id}" style="width: auto; padding: 6px; background: #111827; color: #fff; border: 1px solid #374151; border-radius: 4px;">
+                            <option value="">اختر الفائز...</option>
+                            <option value="${m.player1_id}" ${m.winner_id === m.player1_id ? 'selected' : ''}>${p1Name}</option>
+                            <option value="${m.player2_id}" ${m.winner_id === m.player2_id ? 'selected' : ''}>${p2Name}</option>
+                        </select>
+                    ` : `<span style="color: #10b981; font-weight: bold;">تم التأهل تلقائياً</span>`}
+                </div>
+            </div>
+        `;
+    });
+    matchesHtml += `</div>`;
+
+    const { isConfirmed } = await Swal.fire({
+        title: `متابعة مباريات: ${tourTitle}`,
+        html: matchesHtml,
+        background: '#111827',
+        color: '#fff',
+        width: '650px',
+        showCancelButton: true,
+        confirmButtonText: 'حفظ النتائج وتحديث الشجرة 💾',
+        cancelButtonText: 'إغلاق',
+        preConfirm: () => {
+            let updates = [];
+            matches.forEach(m => {
+                if (m.player2_id !== null) {
+                    const selectEl = document.getElementById(`winner-select-${m.id}`);
+                    if (selectEl && selectEl.value) {
+                        const winnerId = parseInt(selectEl.value);
+                        updates.push({
+                            id: m.id,
+                            winner_id: winnerId,
+                            status: 'completed'
+                        });
+                    }
+                }
+            });
+            return updates;
+        }
+    });
+
+    if (isConfirmed && isConfirmed.length > 0) {
+        // تحديث كل مباراة تم اختيار الفائز لها في قاعدة البيانات
+        try {
+            for (let update of isConfirmed) {
+                await fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${update.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        winner_id: update.winner_id,
+                        status: update.status
+                    })
+                });
+            }
+            Swal.fire('تم الحفظ!', 'تم تحديث نتائج المباريات بنجاح، وستظهر في شجرة البطولة.', 'success');
+        } catch (err) {
+            Swal.fire('خطأ', 'حدث خطأ أثناء حفظ النتائج.', 'error');
+        }
     }
 }
 
@@ -298,16 +395,16 @@ async function deleteTournament(tId) {
     }
 }
 
-// تحميل اللاعبين مع ربطهم بالبطولة الخاصة بهم
+// تحميل اللاعبين وتخزينهم في المتغير العام
 async function loadPlayers() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/players?select=*`, { 
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
     });
-    const players = await res.json();
+    globalPlayers = await res.json();
     const tbody = document.getElementById('pBody');
-    if (!players || !players.length) { tbody.innerHTML = `<tr><td colspan="7" style="color: #9ca3af;">لا يوجد لاعبين.</td></tr>`; return; }
+    if (!globalPlayers || !globalPlayers.length) { tbody.innerHTML = `<tr><td colspan="7" style="color: #9ca3af;">لا يوجد لاعبين.</td></tr>`; return; }
 
-    tbody.innerHTML = players.map(p => {
+    tbody.innerHTML = globalPlayers.map(p => {
         const tourObj = globalTournaments.find(t => t.id === p.tournament_id);
         const tourName = tourObj ? tourObj.title : '<span style="color:#ef4444;">غير محددة</span>';
         return `
