@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎮 بث وبطولة الجيمنج الحية</title>
+    <!-- تضمين مكتبة SweetAlert2 لعمل الاحتفالات والرسائل المنبثقة الأسطورية -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         :root {
             --bg-color: #07090e;
@@ -27,7 +29,7 @@
         /* جدول المواجهات */
         .matchup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-top: 15px; }
         .match-card { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-        .match-header { font-size: 12px; color: #94a3b8; margin-bottom: 8px; font-weight: bold; text-transform: uppercase; text-align: center; }
+        .match-header { font-size: 13px; color: #60a5fa; margin-bottom: 10px; font-weight: bold; text-align: center; background: rgba(59, 130, 246, 0.1); padding: 6px; border-radius: 6px; }
         .vs-container { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
         .player-box { flex: 1; background: #1e293b; padding: 10px; border-radius: 8px; text-align: center; }
         .player-box b { color: #60a5fa; display: block; font-size: 15px; margin-bottom: 2px; }
@@ -65,8 +67,8 @@
     <!-- جدول ومباريات البطولة -->
     <div class="card">
         <div class="section-header-flex">
-            <h3 style="color: #60a5fa; margin: 0;">🏆 جدول مباريات البطولة الحية</h3>
-            <a href="#" id="viewBracketPageBtn" class="btn-bracket" style="display: none;">📊 عرض شجرة المباريات التفصيلية</a>
+            <h3 style="color: #60a5fa; margin: 0;" id="roundTitleHeader">🏆 جدول مباريات البطولة الحية</h3>
+            <a href="#" id="viewBracketPageBtn" class="btn-bracket" style="display: none;">📊 تحديث الصفحة والاطلاع</a>
         </div>
         <div class="matchup-grid" id="liveBracketContainer">
             <p style="color: #9ca3af; text-align: center; grid-column: 1 / -1;">جاري تحميل جدول المواجهات...</p>
@@ -78,10 +80,19 @@
 const SUPABASE_URL = "https://pudnffhwusacrquqcjei.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Sveiq2WcgtBoIa7KMjlK3g_MCFXLVjK";
 
+// قراءة الـ ID الخاص بالبطولة من الرابط لو وجد، أو جلب الأحدث تلقائياً
+const urlParams = new URLSearchParams(window.location.search);
+const requestedTourId = urlParams.get('id');
+
 async function loadLiveBracket() {
     try {
-        // 1. جلب معلومات البطولة النشطة (آخر بطولة تم إنشاؤها)
-        const tRes = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?order=id.desc&limit=1`, {
+        // 1. جلب معلومات البطولة المستهدفة
+        let tUrl = `${SUPABASE_URL}/rest/v1/tournaments?order=id.desc&limit=1`;
+        if (requestedTourId) {
+            tUrl = `${SUPABASE_URL}/rest/v1/tournaments?id=eq.${requestedTourId}&limit=1`;
+        }
+
+        const tRes = await fetch(tUrl, {
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
         });
         const tournaments = await tRes.json();
@@ -100,7 +111,6 @@ async function loadLiveBracket() {
         const currentTour = tournaments[0];
         document.getElementById('mainTourTitle').innerText = `🎮 بطولة: ${currentTour.title}`;
 
-        // تفعيل زر الانتقال لشجرة المباريات المرئية الخاصة بهذه البطولة
         bracketBtn.href = `bracket.html?id=${currentTour.id}`;
         bracketBtn.style.display = 'inline-block';
 
@@ -121,27 +131,62 @@ async function loadLiveBracket() {
             fallbackBtn.style.display = 'none';
         }
 
-        // 2. جلب جميع اللاعبين المرتبطين بهذه البطولة لتسهيل مطابقة أسمائهم
+        // 2. جلب جميع اللاعبين لهذه البطولة
         const pRes = await fetch(`${SUPABASE_URL}/rest/v1/players?tournament_id=eq.${currentTour.id}&select=*`, {
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
         });
         const players = await pRes.json();
 
-        // 3. جلب المباريات الحقيقية (Matches) التي ولدها الأدمن من لوحة التحكم فقط!
+        // 3. جلب جميع مواجهات هذه البطولة لمعرفة أحدث جولة فقط وعدم تكرار المباريات القديمة
         const mRes = await fetch(`${SUPABASE_URL}/rest/v1/matches?tournament_id=eq.${currentTour.id}&select=*`, {
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
         });
-        const matches = await mRes.json();
+        const allMatches = await mRes.json();
         const container = document.getElementById('liveBracketContainer');
 
-        if (!matches || matches.length === 0) {
+        if (!allMatches || allMatches.length === 0) {
             container.innerHTML = `<p style="color: #facc15; text-align: center; grid-column: 1 / -1; padding: 20px;">⏳ في انتظار قيام المنظم (الأدمن) بتوليد القرعة للمباريات من لوحة التحكم...</p>`;
             return;
         }
 
+        // استخراج أحدث جولة تم لعبها/إنشاؤها فقط لعرضها للمشاهدين بنظافة تامة
+        const latestRoundName = allMatches[allMatches.length - 1].round_name;
+        const currentRoundMatches = allMatches.filter(m => m.round_name === latestRoundName);
+
+        // تغيير عنوان القسم ليعرض اسم الجولة الحالية بوضوح (مثل: النهائي الكبير 🏆)
+        document.getElementById('roundTitleHeader').innerText = `🏆 جدول مباريات (${latestRoundName})`;
+
         container.innerHTML = '';
 
-        matches.forEach((m, index) => {
+        // فحص ما إذا كانت البطولة انتهت وتم تتويج بطل في هذه الجولة (بقاء فائز نهائي واحد أو تأهل فردي حاسم)
+        let hasChampion = false;
+        let championPlayer = null;
+
+        if (currentRoundMatches.length === 1 && currentRoundMatches[0].status === 'completed' && currentRoundMatches[0].winner_id) {
+            hasChampion = true;
+            const champId = currentRoundMatches[0].winner_id;
+            championPlayer = players.find(pl => pl.id === champId);
+        }
+
+        if (hasChampion && championPlayer) {
+            // عرض احتفالية التتويج الأسطورية الكبرى مباشرة على الشاشة للجمهور!
+            container.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; background: linear-gradient(135deg, #1e1b4b, #0f172a); border: 2px solid #facc15; border-radius: 16px; padding: 30px; box-shadow: 0 0 30px rgba(250,204,21,0.3);">
+                    <h2 style="color: #facc15; font-size: 32px; margin-bottom: 10px; text-shadow: 0 0 15px rgba(250,204,21,0.5);">👑 تم تتويج بطل البطولة! 👑</h2>
+                    <p style="color: #9ca3af; font-size: 16px; margin-bottom: 20px;">أسدل الستار على المعركة الكبرى وحسم اللقب بنجاح تام</p>
+                    <div style="background: rgba(17, 24, 39, 0.8); display: inline-block; padding: 20px; border-radius: 12px; border: 1px solid #374151; min-width: 280px;">
+                        <b style="color: #60a5fa; font-size: 22px; display: block; margin-bottom: 5px;">${championPlayer.name}</b>
+                        <span style="font-size: 13px; color: #94a3b8; display: block; margin-bottom: 10px;">ID: ${championPlayer.game_id}</span>
+                        <img src="${championPlayer.squad_image_url}" style="width: 150px; height: 90px; object-fit: cover; border-radius: 8px; border: 2px solid #facc15; cursor: pointer;" onclick="window.open('${championPlayer.squad_image_url}', '_blank')">
+                        <div style="margin-top: 10px; color: #34d399; font-weight: bold; font-size: 15px;">🏆 بطل البطولة بلا منازع 🔥</div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // عرض مباريات الجولة الحالية بشكل منظم
+        currentRoundMatches.forEach((m, index) => {
             const p1 = players.find(pl => pl.id === m.player1_id);
             const p2 = players.find(pl => pl.id === m.player2_id);
 
@@ -154,7 +199,7 @@ async function loadLiveBracket() {
             if (m.player2_id !== null && p1 && p2) {
                 container.innerHTML += `
                     <div class="match-card">
-                        <div class="match-header">المباراة #${index + 1} (${m.round_name || 'دور إقصائي'})</div>
+                        <div class="match-header">المباراة #${index + 1} (${m.round_name})</div>
                         <div class="vs-container">
                             <div class="player-box ${isP1Winner ? 'winner' : ''}">
                                 <b>${p1Name} ${isP1Winner ? '👑' : ''}</b>
@@ -176,7 +221,7 @@ async function loadLiveBracket() {
                 // مواجهة تأهل مباشر (Bye)
                 container.innerHTML += `
                     <div class="match-card" style="border-color: #10b981;">
-                        <div class="match-header" style="color: #10b981;">✨ تأهل مباشر (${m.round_name || 'دور إقصائي'})</div>
+                        <div class="match-header" style="color: #10b981; background: rgba(16, 185, 129, 0.1);">✨ تأهل مباشر (${m.round_name})</div>
                         <div style="text-align: center; padding: 10px;" class="player-box winner">
                             <b style="color: #60a5fa; font-size: 16px;">${p1Name} 👑</b>
                             <span style="font-size:11px; color:#94a3b8; display:block;">ID: ${p1.game_id}</span>
