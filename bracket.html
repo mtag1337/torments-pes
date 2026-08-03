@@ -31,6 +31,7 @@
         .vs-container { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
         .player-box { flex: 1; background: #1e293b; padding: 10px; border-radius: 8px; text-align: center; }
         .player-box b { color: #60a5fa; display: block; font-size: 15px; margin-bottom: 2px; }
+        .player-box.winner { border: 2px solid #10b981; background: rgba(16, 185, 129, 0.05); }
         .player-squad { width: 100%; height: 65px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid #3b82f6; margin-top: 6px; transition: 0.2s; }
         .player-squad:hover { transform: scale(1.05); }
         .vs-badge { background: var(--danger-color); color: white; padding: 6px 10px; border-radius: 50%; font-weight: 900; font-size: 12px; align-self: center; }
@@ -65,7 +66,7 @@
     <div class="card">
         <div class="section-header-flex">
             <h3 style="color: #60a5fa; margin: 0;">🏆 جدول مباريات البطولة الحية</h3>
-            <a href="#" id="viewBracketPageBtn" class="btn-bracket" style="display: none;">📊 عرض شجرة المباريات (Challonge)</a>
+            <a href="#" id="viewBracketPageBtn" class="btn-bracket" style="display: none;">📊 عرض شجرة المباريات التفصيلية</a>
         </div>
         <div class="matchup-grid" id="liveBracketContainer">
             <p style="color: #9ca3af; text-align: center; grid-column: 1 / -1;">جاري تحميل جدول المواجهات...</p>
@@ -79,7 +80,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_Sveiq2WcgtBoIa7KMjlK3g_MCFXLVjK";
 
 async function loadLiveBracket() {
     try {
-        // 1. جلب رابط البث ومعلومات البطولة النشطة (آخر بطولة تم إنشاؤها)
+        // 1. جلب معلومات البطولة النشطة (آخر بطولة تم إنشاؤها)
         const tRes = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?order=id.desc&limit=1`, {
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
         });
@@ -106,17 +107,13 @@ async function loadLiveBracket() {
         // إدارة رابط يوتيوب والبث المباشر
         if (currentTour.stream_url) {
             let rawUrl = currentTour.stream_url.trim();
-            
-            // عرض البث داخل iframe
             streamBox.innerHTML = `<iframe src="${rawUrl}" allowfullscreen></iframe>`;
             
-            // تجهيز الرابط الاحتياطي المباشر
             let watchUrl = rawUrl;
             if (rawUrl.includes('/embed/')) {
                 let videoId = rawUrl.split('/embed/')[1].split('?')[0];
                 watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
             }
-            
             directLink.href = watchUrl;
             fallbackBtn.style.display = 'block';
         } else {
@@ -124,63 +121,74 @@ async function loadLiveBracket() {
             fallbackBtn.style.display = 'none';
         }
 
-        // 2. جلب اللاعبين المسجلين في هذه البطولة بالتحديد (باستخدام tournament_id)
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/players?tournament_id=eq.${currentTour.id}&select=*`, {
+        // 2. جلب جميع اللاعبين المرتبطين بهذه البطولة لتسهيل مطابقة أسمائهم
+        const pRes = await fetch(`${SUPABASE_URL}/rest/v1/players?tournament_id=eq.${currentTour.id}&select=*`, {
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
         });
-        const players = await res.json();
+        const players = await pRes.json();
+
+        // 3. جلب المباريات الحقيقية (Matches) التي ولدها الأدمن من لوحة التحكم فقط!
+        const mRes = await fetch(`${SUPABASE_URL}/rest/v1/matches?tournament_id=eq.${currentTour.id}&select=*`, {
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        const matches = await mRes.json();
         const container = document.getElementById('liveBracketContainer');
 
-        if (!players || players.length < 2) {
-            container.innerHTML = `<p style="color: #9ca3af; text-align: center; grid-column: 1 / -1;">لا توجد مواجهات كافية حالياً في هذه البطولة (أقل من لاعبين).</p>`;
+        if (!matches || matches.length === 0) {
+            container.innerHTML = `<p style="color: #facc15; text-align: center; grid-column: 1 / -1; padding: 20px;">⏳ في انتظار قيام المنظم (الأدمن) بتوليد القرعة للمباريات من لوحة التحكم...</p>`;
             return;
         }
 
-        // تثبيت وترتيب اللاعبين بناءً على الـ id لمنع أي تغيير عشوائي عند تحديث الصفحة
-        let arr = [...players].sort((a, b) => a.id - b.id);
         container.innerHTML = '';
 
-        let matchNum = 1;
-        for (let i = 0; i < arr.length; i += 2) {
-            const p1 = arr[i];
-            const p2 = arr[i+1];
+        matches.forEach((m, index) => {
+            const p1 = players.find(pl => pl.id === m.player1_id);
+            const p2 = players.find(pl => pl.id === m.player2_id);
 
-            if (p2) {
+            const p1Name = p1 ? p1.name : 'لاعب غير محدد';
+            const p2Name = p2 ? p2.name : (m.player2_id === null ? 'تأهل مباشر (Bye)' : 'لاعب غير محدد');
+
+            const isP1Winner = m.winner_id === m.player1_id;
+            const isP2Winner = m.winner_id === m.player2_id;
+
+            if (m.player2_id !== null && p1 && p2) {
                 container.innerHTML += `
                     <div class="match-card">
-                        <div class="match-header">المباراة #${matchNum}</div>
+                        <div class="match-header">المباراة #${index + 1} (${m.round_name || 'دور إقصائي'})</div>
                         <div class="vs-container">
-                            <div class="player-box">
-                                <b>${p1.name}</b>
+                            <div class="player-box ${isP1Winner ? 'winner' : ''}">
+                                <b>${p1Name} ${isP1Winner ? '👑' : ''}</b>
                                 <span style="font-size:11px; color:#94a3b8; display:block;">ID: ${p1.game_id}</span>
-                                <img src="${p1.squad_image_url}" class="player-squad" onclick="window.open('${p1.squad_image_url}', '_blank')" title="اضغط لتكبير تشكيلة ${p1.name}">
+                                <img src="${p1.squad_image_url}" class="player-squad" onclick="window.open('${p1.squad_image_url}', '_blank')" title="اضغط لتكبير تشكيلة ${p1Name}">
                                 <div class="tawseya-text">💬 "${p1.tawseya || 'بدون وصية'}"</div>
                             </div>
                             <div class="vs-badge">VS</div>
-                            <div class="player-box">
-                                <b>${p2.name}</b>
+                            <div class="player-box ${isP2Winner ? 'winner' : ''}">
+                                <b>${p2Name} ${isP2Winner ? '👑' : ''}</b>
                                 <span style="font-size:11px; color:#94a3b8; display:block;">ID: ${p2.game_id}</span>
-                                <img src="${p2.squad_image_url}" class="player-squad" onclick="window.open('${p2.squad_image_url}', '_blank')" title="اضغط لتكبير تشكيلة ${p2.name}">
+                                <img src="${p2.squad_image_url}" class="player-squad" onclick="window.open('${p2.squad_image_url}', '_blank')" title="اضغط لتكبير تشكيلة ${p2Name}">
                                 <div class="tawseya-text">💬 "${p2.tawseya || 'بدون وصية'}"</div>
                             </div>
                         </div>
                     </div>
                 `;
-            } else {
+            } else if (p1) {
+                // مواجهة تأهل مباشر (Bye)
                 container.innerHTML += `
                     <div class="match-card" style="border-color: #10b981;">
-                        <div class="match-header" style="color: #10b981;">تأهل مباشر (Bye)</div>
-                        <div style="text-align: center; padding: 10px;">
-                            <b style="color: #60a5fa; font-size: 16px;">${p1.name}</b>
+                        <div class="match-header" style="color: #10b981;">✨ تأهل مباشر (${m.round_name || 'دور إقصائي'})</div>
+                        <div style="text-align: center; padding: 10px;" class="player-box winner">
+                            <b style="color: #60a5fa; font-size: 16px;">${p1Name} 👑</b>
+                            <span style="font-size:11px; color:#94a3b8; display:block;">ID: ${p1.game_id}</span>
                             <img src="${p1.squad_image_url}" class="player-squad" style="max-width: 120px; margin: 8px auto; display:block;" onclick="window.open('${p1.squad_image_url}', '_blank')">
                             <div class="tawseya-text">💬 "${p1.tawseya || 'بدون وصية'}"</div>
-                            <p style="font-size: 12px; color: #9ca3af; margin: 5px 0 0 0;">صعد للدور التالي تلقائياً لعدم وجود منافس.</p>
+                            <p style="font-size: 12px; color: #10b981; margin: 5px 0 0 0; font-weight: bold;">صعد للدور التالي تلقائياً</p>
                         </div>
                     </div>
                 `;
             }
-            matchNum++;
-        }
+        });
+
     } catch (err) {
         console.error(err);
     }
