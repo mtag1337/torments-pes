@@ -108,7 +108,7 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
     }
 });
 
-// 2. ميزة الانتقال للمرحلة التالية بذكاء كامل (مع دعم التسمية التلقائية والتحكم اليدوي وتتويج البطل)
+// 2. ميزة الانتقال للمرحلة التالية بذكاء كامل وتصفية نهائية تمنع تكرار اللاعب أو لعبه مع نفسه
 async function advanceToNextRound() {
     try {
         // أ. جلب أحدث بطولة نشطة تلقائياً
@@ -140,17 +140,18 @@ async function advanceToNextRound() {
             return;
         }
 
-        // د. تجميع IDs الفائزين فقط وعدم تكرارها (استبعاد الخاسرين تلقائياً)
-        let winnersIds = [];
+        // د. تجميع IDs الفائزين بدقة تامة وتصفيتهم باستخدام Set لمنع أي تكرار نهائياً
+        let rawWinnersIds = [];
         matches.forEach(m => {
-            if (m.winner_id && !winnersIds.includes(m.winner_id)) {
-                winnersIds.push(m.winner_id);
+            if (m.winner_id) {
+                rawWinnersIds.push(m.winner_id);
             }
         });
 
-        // هـ. لو لم يتبق سوى لاعب واحد، فهذا معناه أننا في المحطة الأخيرة وتم حسم بطل البطولة النهائي!
+        let winnersIds = [...new Set(rawWinnersIds)];
+
+        // هـ. لو لم يتبق سوى لاعب واحد، فهذا هو بطل البطولة النهائي!
         if (winnersIds.length === 1) {
-            // جلب اسم البطل لعرضه بشكل احتفالي رائع
             const champRes = await fetch(`${SUPABASE_URL}/rest/v1/players?id=eq.${winnersIds[0]}&select=name`, {
                 headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
             });
@@ -172,26 +173,26 @@ async function advanceToNextRound() {
             return;
         }
 
-        // و. الذكاء الاصطناعي البرمجي لاقتراح اسم الجولة بدقة حسب عدد المتأهلين
+        // و. الذكاء البرمجي لتسمية الجولة بدقة تامة بناءً على عدد اللاعبين الفعليين المتأهلين
         let defaultRoundName = '';
         if (winnersIds.length === 2) {
             defaultRoundName = 'النهائي الكبير 🏆';
-        } else if (winnersIds.length <= 4) {
+        } else if (winnersIds.length === 3 || winnersIds.length === 4) {
             defaultRoundName = 'نصف النهائي ⚔️';
-        } else if (winnersIds.length <= 8) {
+        } else if (winnersIds.length > 4 && winnersIds.length <= 8) {
             defaultRoundName = 'ربع النهائي ⚡';
         } else {
             defaultRoundName = `دور الـ ${winnersIds.length}`;
         }
 
-        // ز. نافذة تفاعلية تتيح لك (تعديل اسم المرحلة بنفسك) أو الاعتماد على المقترح الذكي
+        // ز. نافذة منبثقة تفاعلية لتأكيد أو تعديل اسم الجولة
         const { value: customRoundName } = await Swal.fire({
             title: '⚡ الانتقال للمرحلة التالية',
             background: '#111827',
             color: '#fff',
             html: `
                 <div style="text-align: right; margin-bottom: 10px;">
-                    <p style="color: #9ca3af; font-size: 13px; margin-bottom: 8px;">النظام حدد ذكياً أن عدد المتأهلين للمرحلة القادمة هو <b>(${winnersIds.length} لاعبين)</b>.</p>
+                    <p style="color: #9ca3af; font-size: 13px; margin-bottom: 8px;">عدد المتأهلين الحقيقيين هو <b>(${winnersIds.length} لاعبين)</b> وتمت تصفيتهم بدقة.</p>
                     <label style="display:block; margin-bottom:5px; font-weight:bold;">اسم الجملة أو المرحلة التي ستظهر للجمهور:</label>
                     <input id="swal-round-input" class="swal2-input" value="${defaultRoundName}" style="width:90%; margin:0; background:#0d1322; color:#fff; border:1px solid #374151; text-align: center; font-weight: bold; color: #60a5fa;">
                 </div>
@@ -205,9 +206,9 @@ async function advanceToNextRound() {
             }
         });
 
-        if (!customRoundName) return; // لو المستخدم ألغى العملية
+        if (!customRoundName) return;
 
-        // ح. عمل قرعة عشوائية جديدة للفائزين المتأهلين
+        // ح. خلط عشوائي آمن (Shuffling) مع حماية ضد لعب اللاعب مع نفسه
         let shuffledWinners = [...winnersIds].sort(() => Math.random() - 0.5);
         let nextRoundMatches = [];
 
@@ -215,7 +216,12 @@ async function advanceToNextRound() {
             let player1 = shuffledWinners[i];
             let player2 = shuffledWinners[i+1] || null;
 
-            if (player2) {
+            // حماية إضافية تمنع استحالة أن يكون اللاعب الأول هو نفسه الثاني
+            if (player2 && player1 === player2) {
+                player2 = null;
+            }
+
+            if (player2 !== null) {
                 nextRoundMatches.push({
                     tournament_id: parseInt(tourId),
                     round_name: customRoundName,
@@ -225,7 +231,7 @@ async function advanceToNextRound() {
                     status: 'pending'
                 });
             } else {
-                // في حال كان عدد الفائزين فردياً، يتأهل تلقائياً (Bye) للدور التالي
+                // تأهل تلقائي (Bye) في حالة بقاء لاعب فردي بدون منافس
                 nextRoundMatches.push({
                     tournament_id: parseInt(tourId),
                     round_name: customRoundName,
@@ -250,7 +256,7 @@ async function advanceToNextRound() {
         });
 
         if (insertRes.ok) {
-            Swal.fire('تم بنجاح! 🔥', `تم إقصاء الخاسرين وتأهيل الفائزين، وتوليد مواجهات (${customRoundName}) بنجاح!`, 'success');
+            Swal.fire('تم بنجاح! 🔥', `تمت تصفية اللاعبين وتوزيع المباريات لـ (${customRoundName}) بدون أي أخطاء أو تكرار!`, 'success');
         } else {
             const err = await insertRes.json();
             Swal.fire('خطأ', 'فشل الانتقال للمرحلة التالية: ' + (err.message || ''), 'error');
