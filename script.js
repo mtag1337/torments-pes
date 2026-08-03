@@ -4,6 +4,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_Sveiq2WcgtBoIa7KMjlK3g_MCFXLVjK";
 const TELEGRAM_BOT_TOKEN = "8742400429:AAFlfYMu9wGeejkKDiqpGuytrDI33fJRwnI";
 const TELEGRAM_CHAT_ID = "8582459288";
 
+// 1. كود تسجيل اللاعب
 document.getElementById('registrationForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
@@ -106,3 +107,104 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
         loadingText.style.display = 'none';
     }
 });
+
+// 2. ميزة الانتقال للمرحلة التالية (تأهيل الفائزين واستبعاد الخاسرين وتوزيع المباريات الجديدة)
+async function advanceToNextRound() {
+    try {
+        // أ. جلب أحدث بطولة نشطة
+        const tRes = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?order=id.desc&limit=1`, {
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        const tournaments = await tRes.json();
+        if (!tournaments || tournaments.length === 0) {
+            Swal.fire('تنبيه', 'لا توجد بطولات نشطة.', 'warning');
+            return;
+        }
+        const tourId = tournaments[0].id;
+
+        // ب. جلب مواجهات البطولة الحالية
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/matches?tournament_id=eq.${tourId}&select=*`, {
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        const matches = await res.json();
+
+        if (!matches || matches.length === 0) {
+            Swal.fire('تنبيه', 'لا توجد مواجهات مسجلة للبطولة الحالية.', 'warning');
+            return;
+        }
+
+        // ج. التأكد من انتهاء جميع المباريات الحالية وتحديد فائزين لها
+        const uncompleted = matches.filter(m => m.status !== 'completed' && m.player2_id !== null);
+        if (uncompleted.length > 0) {
+            Swal.fire('تنبيه', 'لا يمكن الانتقال للمرحلة التالية حتى يتم تحديد الفائزين في جميع المواجهات الحالية!', 'error');
+            return;
+        }
+
+        // د. تجميع IDs الفائزين فقط (استبعاد الخاسرين تلقائياً)
+        let winnersIds = [];
+        matches.forEach(m => {
+            if (m.winner_id) {
+                winnersIds.push(m.winner_id);
+            }
+        });
+
+        if (winnersIds.length <= 1) {
+            Swal.fire('تهانينا! 🏆', 'لقد تم حسم بطل البطولة النهائي أو لم يتبق سوى متأهل واحد!', 'success');
+            return;
+        }
+
+        // هـ. عمل قرعة عشوائية جديدة للفائزين
+        let shuffledWinners = [...winnersIds].sort(() => Math.random() - 0.5);
+        let nextRoundMatches = [];
+        
+        let nextRoundName = shuffledWinners.length === 2 ? 'النهائي 🏆' : (shuffledWinners.length <= 4 ? 'نصف النهائي' : 'دور الـ ' + shuffledWinners.length);
+
+        for (let i = 0; i < shuffledWinners.length; i += 2) {
+            let player1 = shuffledWinners[i];
+            let player2 = shuffledWinners[i+1] || null;
+
+            if (player2) {
+                nextRoundMatches.push({
+                    tournament_id: parseInt(tourId),
+                    round_name: nextRoundName,
+                    player1_id: player1,
+                    player2_id: player2,
+                    winner_id: null,
+                    status: 'pending'
+                });
+            } else {
+                // في حال كان العدد فردياً، يتأهل تلقائياً (Bye)
+                nextRoundMatches.push({
+                    tournament_id: parseInt(tourId),
+                    round_name: nextRoundName,
+                    player1_id: player1,
+                    player2_id: null,
+                    winner_id: player1,
+                    status: 'completed'
+                });
+            }
+        }
+
+        // و. إرسال مباريات المرحلة الجديدة لقاعدة البيانات
+        const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/matches`, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(nextRoundMatches)
+        });
+
+        if (insertRes.ok) {
+            Swal.fire('تم بنجاح! 🚀', `تم إقصاء الخاسرين وتأهيل الفائزين وعمل قرعة (${nextRoundName}) وتوليد المباريات الجديدة بنجاح.`, 'success');
+        } else {
+            const err = await insertRes.json();
+            Swal.fire('خطأ', 'فشل الانتقال للمرحلة التالية: ' + (err.message || ''), 'error');
+        }
+    } catch (error) {
+        console.error(error);
+        Swal.fire('خطأ!', 'حدث خطأ غير متوقع أثناء الانتقال للمرحلة التالية.', 'error');
+    }
+}
