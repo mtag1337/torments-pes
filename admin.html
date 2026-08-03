@@ -22,7 +22,8 @@
         th { background: #1f2937; color: #60a5fa; }
         img.squad-thumb { width: 45px; height: 45px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid #3b82f6; }
         img.squad-thumb:hover { transform: scale(1.1); }
-        .tour-item { background: #0d1322; padding: 10px 15px; margin-bottom: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #1f2937; }
+        .tour-item { background: #0d1322; padding: 10px 15px; margin-bottom: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #1f2937; flex-wrap: wrap; gap: 10px; }
+        .tour-actions { display: flex; gap: 8px; align-items: center; }
     </style>
 </head>
 <body>
@@ -114,27 +115,18 @@ function formatYoutubeUrl(url) {
     
     let videoId = '';
     
-    // لو الرابط يتبع روابط البث المباشر /live/
     if (url.includes('/live/')) {
         videoId = url.split('/live/')[1].split('?')[0];
-    } 
-    // لو الرابط العادي watch?v=
-    else if (url.includes('watch?v=')) {
+    } else if (url.includes('watch?v=')) {
         videoId = url.split('watch?v=')[1];
         if (videoId.includes('&')) {
             videoId = videoId.split('&')[0];
         }
-    } 
-    // لو الرابط المختصر youtu.be/
-    else if (url.includes('youtu.be/')) {
+    } else if (url.includes('youtu.be/')) {
         videoId = url.split('youtu.be/')[1].split('?')[0];
-    } 
-    // لو الرابط بالفعل يحتوي على embed/
-    else if (url.includes('/embed/')) {
+    } else if (url.includes('/embed/')) {
         videoId = url.split('/embed/')[1].split('?')[0];
-    }
-    // لو تم إدخال الـ ID مباشرة
-    else {
+    } else {
         videoId = url;
     }
     
@@ -152,7 +144,6 @@ document.getElementById('createTourForm').addEventListener('submit', async (e) =
     const max_players = parseInt(document.getElementById('tMax').value);
     const rawStream = document.getElementById('tStream').value;
     
-    // تحويل الرابط تلقائياً
     const stream_url = formatYoutubeUrl(rawStream);
 
     try {
@@ -188,7 +179,7 @@ document.getElementById('createTourForm').addEventListener('submit', async (e) =
     }
 });
 
-// تحميل البطولات مع زر الحذف الخاص بها
+// تحميل البطولات مع زر الحذف وزر "عرض الشجرة" المرئي الجديد
 async function loadTours() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?select=*`, { 
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
@@ -199,7 +190,10 @@ async function loadTours() {
         document.getElementById('tList').innerHTML = data.map(t => `
             <div class="tour-item">
                 <span><b>${t.title}</b> (${t.game_name}) - السعة: ${t.max_players} | <span style="color:#10b981; font-weight:bold;">${t.status}</span></span>
-                <button class="btn-danger" onclick="deleteTournament(${t.id})">حذف البطولة 🗑️</button>
+                <div class="tour-actions">
+                    <a href="bracket.html?id=${t.id}" target="_blank" class="btn-main" style="padding:6px 12px; font-size:12px; text-decoration:none; display:inline-block; width:auto; background:#10b981; margin-top:0;">📊 عرض الشجرة</a>
+                    <button class="btn-danger" onclick="deleteTournament(${t.id})">حذف 🗑️</button>
+                </div>
             </div>
         `).join('');
         document.getElementById('drawSelect').innerHTML = '<option value="">اختر البطولة للقرعة...</option>' + data.map(t => `<option value="${t.id}">${t.title}</option>`).join('');
